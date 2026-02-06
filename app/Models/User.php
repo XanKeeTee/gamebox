@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+// 1. IMPORTARLO AQUÍ ARRIBA
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\Notifiable; // <--- ¡ESTO ES CRUCIAL!
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    // 2. USARLO DENTRO DE LA CLASE
+    use HasFactory, Notifiable; // <--- ¡TIENE QUE ESTAR AQUÍ TAMBIÉN!
 
     /**
      * The attributes that are mass assignable.
@@ -21,8 +23,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'avatar',
-        'bio',
+        'avatar', // Asegúrate de que esto esté si usas avatares
+        'bio',    // Y esto si usas biografía
     ];
 
     /**
@@ -48,44 +50,52 @@ class User extends Authenticatable
         ];
     }
 
-    // Añade esta función dentro de la clase User
+    // RELACIONES (Ya las tenías, las mantengo aquí para que no las pierdas)
+
+    // Librería de Juegos
+    public function library()
+    {
+        return $this->belongsToMany(Game::class)
+                    ->withPivot([
+                        'liked', 
+                        'wishlisted', 
+                        'favorite_slot', 
+                        'status',
+                        'hours_played',
+                        'started_at', 
+                        'finished_at', 
+                        'private_notes'
+                    ])
+                    ->withTimestamps();
+    }
+
+    // Reviews escritas por el usuario
     public function reviews()
     {
         return $this->hasMany(Review::class);
     }
 
-    // Relación: Biblioteca del usuario (Likes y Wishlist)
-    // En app/Models/User.php
-
-    public function library()
-    {
-        // Asegúrate de añadir 'status' aquí
-        return $this->belongsToMany(Game::class)
-            ->withPivot('liked', 'wishlisted', 'favorite_slot', 'status')
-            ->withTimestamps();
-    }
-
-    // Usuarios que ME siguen a mí
-    public function followers()
-    {
-        return $this->belongsToMany(User::class, 'followers', 'following_id', 'follower_id')->withTimestamps();
-    }
-
-    // Usuarios a los que YO sigo
-    public function following()
-    {
-        return $this->belongsToMany(User::class, 'followers', 'follower_id', 'following_id')->withTimestamps();
-    }
-
-    // Helper para saber si ya sigo a alguien
-    public function isFollowing(User $user)
-    {
-        return $this->following()->where('following_id', $user->id)->exists();
-    }
-
+    // Listas personalizadas
     public function lists()
     {
         return $this->hasMany(GameList::class)->latest();
     }
 
+    // Seguidores
+    public function followers()
+    {
+        return $this->belongsToMany(User::class, 'followers', 'following_id', 'follower_id')->withTimestamps();
+    }
+
+    // Siguiendo
+    public function following()
+    {
+        return $this->belongsToMany(User::class, 'followers', 'follower_id', 'following_id')->withTimestamps();
+    }
+
+    // Helper para saber si sigo a alguien
+    public function isFollowing(User $user)
+    {
+        return $this->following()->where('following_id', $user->id)->exists();
+    }
 }

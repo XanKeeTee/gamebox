@@ -63,6 +63,8 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/lists/{list}', [App\Http\Controllers\ListController::class, 'destroy'])->name('lists.destroy');
     Route::delete('/lists/{list}/game/{game}', [App\Http\Controllers\ListController::class, 'removeGame'])->name('lists.removeGame');
+
+    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
 });
 
 require __DIR__ . '/auth.php';

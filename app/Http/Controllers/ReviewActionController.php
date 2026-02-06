@@ -7,6 +7,7 @@ use App\Models\Comment;
 use App\Models\ReviewVote;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Notifications\GameBoxNotification;
 
 class ReviewActionController extends Controller
 {
@@ -39,6 +40,14 @@ class ReviewActionController extends Controller
             ]);
         }
 
+        if ($isLike && $review->user_id !== Auth::id()) {
+            $review->user->notify(new GameBoxNotification(
+                'like',
+                Auth::user()->name . ' le gustó tu reseña de ' . $review->game->name,
+                route('games.show', $review->game->slug),
+                Auth::user()
+            ));
+        }
         return back(); // Recargar página
     }
 
@@ -52,7 +61,15 @@ class ReviewActionController extends Controller
             'review_id' => $review->id,
             'content' => $request->content
         ]);
-
+        
+        if ($review->user_id !== Auth::id()) {
+            $review->user->notify(new GameBoxNotification(
+                'comment',
+                Auth::user()->name . ' comentó tu reseña de ' . $review->game->name,
+                route('games.show', $review->game->slug) . '#comments', // Añadimos ancla
+                Auth::user()
+            ));
+        }
         return back();
     }
 }
