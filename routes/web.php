@@ -8,7 +8,7 @@ use App\Http\Controllers\ReviewController; // Asegúrate de tener este controlad
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\ReviewActionController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\HomeController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -22,8 +22,9 @@ Route::get('/', function () {
 
 // RUTAS PÚBLICAS (Juegos y Comunidad)
 // Las ponemos fuera del 'auth' para que cualquiera pueda verlas (aunque no esté logueado)
-Route::get('/games', [GameController::class, 'index'])->name('games.index');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/games/{game:slug}', [GameController::class, 'show'])->name('games.show');
+Route::get('/games', [GameController::class, 'index'])->name('games.index');
 
 Route::get('/community', [UserController::class, 'index'])->name('users.index');
 Route::get('/user/{name}', [UserController::class, 'show'])->name('users.show');
