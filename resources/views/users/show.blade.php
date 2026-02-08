@@ -102,7 +102,7 @@
                         <div class="overflow-y-auto p-2 flex-1 space-y-1">
                             <template x-if="isLoading"><div class="text-center p-4 text-gray-500 animate-pulse">Buscando...</div></template>
                             
-                            <template x-for="game in searchResults" :key="game.id">
+                            <template x-for="game in searchResults" :key="game.slug">
                                 <form action="{{ route('profile.setFavorite') }}" method="POST">
                                     @csrf 
                                     <input type="hidden" name="slot" :value="currentSlot">

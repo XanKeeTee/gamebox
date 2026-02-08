@@ -43,31 +43,39 @@ class IgdbService
         return $response->successful() ? $response->json() : [];
     }
 
-    // --- HELPER PARA FILTROS (Privado) ---
+    // --- HELPER PARA FILTROS (Mejorado) ---
     private function buildQueryBody($search = null, $filters = [], $isCount = false)
     {
-        // 1. Construir WHERE
-        $where = ["cover != null", "themes != (42)"];
+        // FILTROS DE CALIDAD BÁSICOS (Aplicar SIEMPRE)
+        $where = [
+            "cover != null",           // Debe tener portada
+            "themes != (42)",          // Sin contenido erótico
+            "category = (0, 8, 9)",    // Solo Juegos Base (0), Remakes (8), Remasters (9). (Quita DLCs)
+            "version_parent = null"    // Evita duplicados de ediciones
+        ];
         
+        // Filtros adicionales si NO es una búsqueda específica (para no ocultar resultados legítimos)
+        if (!$search) {
+            $where[] = "total_rating_count > 5"; // Solo juegos con votos para listados generales
+        }
+
         if (!empty($filters['genre'])) $where[] = "genres.slug = \"{$filters['genre']}\"";
         if (!empty($filters['platform'])) $where[] = "platforms.slug = \"{$filters['platform']}\"";
 
         $whereStr = implode(' & ', $where);
 
-        // 2. Si es solo para CONTAR, devolvemos el cuerpo simplificado
         if ($isCount) {
-            if ($search) return "search \"{$search}\"; where {$whereStr};"; // IGDB permite where con search en count
+            if ($search) return "search \"{$search}\"; where {$whereStr};";
             return "where {$whereStr};";
         }
 
-        // 3. Construir query completa para OBTENER DATOS
         $fields = "fields name, slug, cover.url, first_release_date, summary, total_rating, total_rating_count, genres.name, platforms.name;";
         
         if ($search) {
-            return "{$fields} search \"{$search}\"; limit 24;";
+            // AHORA SÍ aplica los filtros de calidad a la búsqueda
+            return "{$fields} search \"{$search}\"; where {$whereStr}; limit 24;";
         }
 
-        // Ordenación
         $sort = "sort total_rating_count desc;";
         if (isset($filters['sort'])) {
             if ($filters['sort'] === 'newest') {
@@ -75,7 +83,7 @@ class IgdbService
                 $whereStr .= " & first_release_date != null & first_release_date < " . time();
             } elseif ($filters['sort'] === 'rating') {
                 $sort = "sort total_rating desc;";
-                $whereStr .= " & total_rating_count > 10";
+                $whereStr .= " & total_rating_count > 50";
             }
         }
 
@@ -86,34 +94,32 @@ class IgdbService
 
     public function getGames($page = 1, $search = null, $filters = [])
     {
-        $cacheKey = 'games_index_' . $page . '_' . md5($search . json_encode($filters));
+        $cacheKey = 'games_v3_index_' . $page . '_' . md5($search . json_encode($filters));
 
         return Cache::remember($cacheKey, 600, function () use ($page, $search, $filters) {
             $offset = ($page - 1) * 24;
             $queryBody = $this->buildQueryBody($search, $filters) . " offset {$offset};";
-            
             return $this->formatGames($this->request('games', $queryBody));
         });
     }
 
-    // NUEVO: Cuenta los resultados reales para la paginación
     public function countGames($search = null, $filters = [])
     {
-        $cacheKey = 'games_count_' . md5($search . json_encode($filters));
+        $cacheKey = 'games_v3_count_' . md5($search . json_encode($filters));
 
         return Cache::remember($cacheKey, 3600, function () use ($search, $filters) {
-            $queryBody = $this->buildQueryBody($search, $filters, true); // true = modo recuento
+            $queryBody = $this->buildQueryBody($search, $filters, true);
             $response = $this->request('games/count', $queryBody);
-            
             return $response['count'] ?? 0;
         });
     }
 
-    // ... (El resto de métodos getPopularGames, getNewReleases, etc. se mantienen igual) ...
+    // ... [RESTO DE MÉTODOS IGUALES] ...
+    
     public function getPopularGames($limit = 6)
     {
         return Cache::remember('home_popular', 3600, function () use ($limit) {
-            $query = "fields name, slug, cover.url, total_rating; sort total_rating_count desc; where total_rating > 70 & cover != null; limit {$limit};";
+            $query = "fields name, slug, cover.url, total_rating; sort total_rating_count desc; where total_rating > 70 & cover != null & category = (0,8,9); limit {$limit};";
             return $this->formatGames($this->request('games', $query));
         });
     }
@@ -122,7 +128,7 @@ class IgdbService
     {
         return Cache::remember('home_new', 3600, function () use ($limit) {
             $now = time();
-            $query = "fields name, slug, cover.url, first_release_date; sort first_release_date desc; where first_release_date != null & first_release_date < {$now} & cover != null; limit {$limit};";
+            $query = "fields name, slug, cover.url, first_release_date; sort first_release_date desc; where first_release_date != null & first_release_date < {$now} & cover != null & category = (0,8,9); limit {$limit};";
             return $this->formatGames($this->request('games', $query));
         });
     }
@@ -131,7 +137,7 @@ class IgdbService
     {
         return Cache::remember('home_upcoming', 3600, function () use ($limit) {
             $now = time();
-            $query = "fields name, slug, cover.url, first_release_date; sort first_release_date asc; where first_release_date > {$now} & cover != null; limit {$limit};";
+            $query = "fields name, slug, cover.url, first_release_date; sort first_release_date asc; where first_release_date > {$now} & cover != null & category = (0,8,9); limit {$limit};";
             return $this->formatGames($this->request('games', $query));
         });
     }
@@ -151,7 +157,7 @@ class IgdbService
     public function getGameBySlug($slug)
     {
         return Cache::remember("game_details_{$slug}", 3600, function () use ($slug) {
-            $query = "fields name, slug, summary, first_release_date, cover.url, genres.name, platforms.name, total_rating; where slug = \"{$slug}\";";
+            $query = "fields name, slug, summary, first_release_date, cover.url, genres.name, platforms.name, total_rating, igdb_id; where slug = \"{$slug}\";";
             $results = $this->request('games', $query);
             
             if (empty($results) || !isset($results[0])) return null;

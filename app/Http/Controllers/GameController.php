@@ -30,7 +30,8 @@ class GameController extends Controller
         ];
 
         $apiGames = $this->igdb->getGames($page, $search, $filters);
-        // Usamos countGames si existe, si no 9999 (para evitar errores si no has actualizado el servicio)
+        
+        // Intentamos usar countGames si existe en el servicio, si no, ponemos un tope
         $totalGames = method_exists($this->igdb, 'countGames') ? $this->igdb->countGames($search, $filters) : 9999;
 
         $games = new LengthAwarePaginator(
@@ -91,7 +92,8 @@ class GameController extends Controller
         );
     }
 
-    // ACCIONES
+    // --- ACCIONES ---
+
     public function toggleLike(Request $request, $slug) {
         $game = $this->ensureGameExists($slug);
         /** @var \App\Models\User $user */
@@ -148,15 +150,17 @@ class GameController extends Controller
         return back()->with('message', 'Diario actualizado.');
     }
 
-    // --- LA FUNCIÓN QUE FALTABA ---
+    // --- ¡ESTA ES LA FUNCIÓN QUE FALTABA! ---
     public function searchJson(Request $request)
     {
         $query = $request->input('q');
+        
+        // Si no hay búsqueda o es muy corta, devolvemos array vacío
         if (!$query || strlen($query) < 2) {
             return response()->json([]);
         }
 
-        // Buscamos en IGDB (esto devuelve ID=0 porque viene de API)
+        // Llamamos al servicio IGDB
         $games = $this->igdb->getGames(1, $query);
 
         return response()->json($games);

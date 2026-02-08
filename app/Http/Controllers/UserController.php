@@ -77,10 +77,11 @@ class UserController extends Controller
 
     public function toggleFollow(User $user)
     {
+        /** @var \App\Models\User $me */
         $me = Auth::user();
         if ($me->id === $user->id) return back();
 
-        if ($me->isFollowing($user)) {
+        if ($me->following()->where('followed_id', $user->id)->exists()) {
             $me->following()->detach($user->id);
         } else {
             $me->following()->attach($user->id);
