@@ -43,37 +43,26 @@ class IgdbService
         return $response->successful() ? $response->json() : [];
     }
 
-    // --- HELPER PARA FILTROS (Mejorado) ---
+    // --- HELPER PARA BÚSQUEDAS Y FILTROS ---
     private function buildQueryBody($search = null, $filters = [], $isCount = false)
     {
-        // FILTROS DE CALIDAD BÁSICOS (Aplicar SIEMPRE)
-        $where = [
-            "cover != null",           // Debe tener portada
-            "themes != (42)",          // Sin contenido erótico
-            "category = (0, 8, 9)",    // Solo Juegos Base (0), Remakes (8), Remasters (9). (Quita DLCs)
-            "version_parent = null"    // Evita duplicados de ediciones
-        ];
+        // AQUÍ ESTÁ LA CLAVE: "category = 0" elimina los DLCs
+        $where = ["cover != null", "themes != (42)", "category = 0"];
         
-        // Filtros adicionales si NO es una búsqueda específica (para no ocultar resultados legítimos)
-        if (!$search) {
-            $where[] = "total_rating_count > 5"; // Solo juegos con votos para listados generales
-        }
-
         if (!empty($filters['genre'])) $where[] = "genres.slug = \"{$filters['genre']}\"";
         if (!empty($filters['platform'])) $where[] = "platforms.slug = \"{$filters['platform']}\"";
 
         $whereStr = implode(' & ', $where);
 
         if ($isCount) {
-            if ($search) return "search \"{$search}\"; where {$whereStr};";
+            if ($search) return "search \"{$search}\"; where {$whereStr};"; 
             return "where {$whereStr};";
         }
 
         $fields = "fields name, slug, cover.url, first_release_date, summary, total_rating, total_rating_count, genres.name, platforms.name;";
         
         if ($search) {
-            // AHORA SÍ aplica los filtros de calidad a la búsqueda
-            return "{$fields} search \"{$search}\"; where {$whereStr}; limit 24;";
+            return "{$fields} search \"{$search}\"; limit 24;";
         }
 
         $sort = "sort total_rating_count desc;";
@@ -83,7 +72,7 @@ class IgdbService
                 $whereStr .= " & first_release_date != null & first_release_date < " . time();
             } elseif ($filters['sort'] === 'rating') {
                 $sort = "sort total_rating desc;";
-                $whereStr .= " & total_rating_count > 50";
+                $whereStr .= " & total_rating_count > 10";
             }
         }
 
@@ -94,7 +83,7 @@ class IgdbService
 
     public function getGames($page = 1, $search = null, $filters = [])
     {
-        $cacheKey = 'games_v3_index_' . $page . '_' . md5($search . json_encode($filters));
+        $cacheKey = 'games_index_' . $page . '_' . md5($search . json_encode($filters));
 
         return Cache::remember($cacheKey, 600, function () use ($page, $search, $filters) {
             $offset = ($page - 1) * 24;
@@ -105,7 +94,7 @@ class IgdbService
 
     public function countGames($search = null, $filters = [])
     {
-        $cacheKey = 'games_v3_count_' . md5($search . json_encode($filters));
+        $cacheKey = 'games_count_' . md5($search . json_encode($filters));
 
         return Cache::remember($cacheKey, 3600, function () use ($search, $filters) {
             $queryBody = $this->buildQueryBody($search, $filters, true);
@@ -114,12 +103,11 @@ class IgdbService
         });
     }
 
-    // ... [RESTO DE MÉTODOS IGUALES] ...
-    
     public function getPopularGames($limit = 6)
     {
         return Cache::remember('home_popular', 3600, function () use ($limit) {
-            $query = "fields name, slug, cover.url, total_rating; sort total_rating_count desc; where total_rating > 70 & cover != null & category = (0,8,9); limit {$limit};";
+            // Añadido "& category = 0"
+            $query = "fields name, slug, cover.url, total_rating; sort total_rating_count desc; where total_rating > 70 & cover != null & category = 0; limit {$limit};";
             return $this->formatGames($this->request('games', $query));
         });
     }
@@ -128,7 +116,8 @@ class IgdbService
     {
         return Cache::remember('home_new', 3600, function () use ($limit) {
             $now = time();
-            $query = "fields name, slug, cover.url, first_release_date; sort first_release_date desc; where first_release_date != null & first_release_date < {$now} & cover != null & category = (0,8,9); limit {$limit};";
+            // Añadido "& category = 0"
+            $query = "fields name, slug, cover.url, first_release_date; sort first_release_date desc; where first_release_date != null & first_release_date < {$now} & cover != null & category = 0; limit {$limit};";
             return $this->formatGames($this->request('games', $query));
         });
     }
@@ -137,7 +126,8 @@ class IgdbService
     {
         return Cache::remember('home_upcoming', 3600, function () use ($limit) {
             $now = time();
-            $query = "fields name, slug, cover.url, first_release_date; sort first_release_date asc; where first_release_date > {$now} & cover != null & category = (0,8,9); limit {$limit};";
+            // Añadido "& category = 0"
+            $query = "fields name, slug, cover.url, first_release_date; sort first_release_date asc; where first_release_date > {$now} & cover != null & category = 0; limit {$limit};";
             return $this->formatGames($this->request('games', $query));
         });
     }
@@ -157,7 +147,7 @@ class IgdbService
     public function getGameBySlug($slug)
     {
         return Cache::remember("game_details_{$slug}", 3600, function () use ($slug) {
-            $query = "fields name, slug, summary, first_release_date, cover.url, genres.name, platforms.name, total_rating, igdb_id; where slug = \"{$slug}\";";
+            $query = "fields name, slug, summary, first_release_date, cover.url, genres.name, platforms.name, total_rating; where slug = \"{$slug}\";";
             $results = $this->request('games', $query);
             
             if (empty($results) || !isset($results[0])) return null;
@@ -169,7 +159,7 @@ class IgdbService
                 'name' => $game['name'],
                 'slug' => $game['slug'],
                 'summary' => $game['summary'] ?? '',
-                'cover_url' => isset($game['cover']) ? str_replace('t_thumb', 't_cover_big', $game['cover']['url']) : null,
+                'cover_url' => isset($game['cover']) ? "https:" . str_replace('t_thumb', 't_cover_big', $game['cover']['url']) : null, // Fix HTTPS
                 'first_release_date' => isset($game['first_release_date']) ? date('Y-m-d', $game['first_release_date']) : null,
                 'rating' => $game['total_rating'] ?? 0,
                 'exists' => false,
@@ -188,7 +178,8 @@ class IgdbService
                 'igdb_id' => $game['id'],
                 'name' => $game['name'],
                 'slug' => $game['slug'],
-                'cover_url' => isset($game['cover']) ? str_replace('t_thumb', 't_cover_big', $game['cover']['url']) : null,
+                // FIX CRÍTICO: Añadir 'https:' para que se vea la imagen
+                'cover_url' => isset($game['cover']) ? "https:" . str_replace('t_thumb', 't_cover_big', $game['cover']['url']) : null,
                 'first_release_date' => $game['first_release_date'] ?? null,
                 'rating' => $game['total_rating'] ?? 0,
                 'exists' => false 
