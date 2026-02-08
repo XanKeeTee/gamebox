@@ -4,7 +4,7 @@
         $isLiked = false;
         $isWishlisted = false;
 
-        // Solo buscamos datos si el usuario está logueado Y el juego existe en local (id > 0)
+        // Si el usuario está logueado y el juego ya existe en BD, cargamos sus datos
         if(Auth::check() && $game->exists){
             $libraryEntry = Auth::user()->library()->where('game_id', $game->id)->first();
             if($libraryEntry){
@@ -15,6 +15,7 @@
     @endphp
 
     @if(session('message')) <div class="fixed top-20 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50">✅ {{ session('message') }}</div> @endif
+    @if(session('error')) <div class="fixed top-20 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-lg z-50">❌ {{ session('error') }}</div> @endif
 
     <div class="min-h-screen bg-[#14181c] text-gray-100 font-sans">
         
@@ -83,9 +84,8 @@
                                 <p class="text-xs text-gray-500">Crea una lista en tu perfil primero.</p>
                             @endif
                         </div>
-
                     @else
-                        <a href="{{ route('login') }}" class="block text-center bg-green-600 text-white py-2 rounded font-bold">Inicia sesión para interactuar</a>
+                        <a href="{{ route('login') }}" class="block text-center bg-green-600 text-white py-2 rounded font-bold">Inicia sesión</a>
                     @endauth
                 </div>
 

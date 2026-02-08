@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Game;
-use App\Models\User; // Importante
+use App\Models\User;
 use App\Services\IgdbService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,26 +23,22 @@ class GameController extends Controller
         $page = $request->input('page', 1);
         $search = $request->input('q');
 
-        // Recogemos filtros
         $filters = [
             'genre' => $request->input('genre'),
             'platform' => $request->input('platform'),
-            'sort' => $request->input('sort', 'popular'), // popular, newest
+            'sort' => $request->input('sort', 'popular'),
         ];
 
-        // Pedimos juegos con filtros
         $apiGames = $this->igdb->getGames($page, $search, $filters);
 
-        // Paginación manual
-        $games = new \Illuminate\Pagination\LengthAwarePaginator(
+        $games = new LengthAwarePaginator(
             $apiGames,
-            9999, // Total simulado
+            9999, 
             24,
             $page,
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        // Listas para los desplegables de filtros
         $genres = $this->igdb->getGenres();
         $platforms = $this->igdb->getPlatforms();
 
@@ -65,14 +61,14 @@ class GameController extends Controller
             $game->id = 0;
         }
 
-        /** @var \App\Models\User $user */
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
         $userLists = $user ? $user->lists : collect();
 
         return view('games.show', compact('game', 'userLists'));
     }
 
-    // Método Privado para guardar juego si no existe
+    // LÓGICA CLAVE: Guarda el juego si es la primera vez que se interactúa
     private function ensureGameExists($slug)
     {
         $game = Game::where('slug', $slug)->first();
@@ -91,13 +87,12 @@ class GameController extends Controller
     }
 
     // ACCIONES
+
     public function toggleLike(Request $request, $slug)
     {
         $game = $this->ensureGameExists($slug);
-
         /** @var \App\Models\User $user */
         $user = Auth::user();
-
         $libraryEntry = $user->library()->where('game_id', $game->id)->first();
 
         if ($libraryEntry) {
@@ -112,10 +107,8 @@ class GameController extends Controller
     public function toggleWishlist(Request $request, $slug)
     {
         $game = $this->ensureGameExists($slug);
-
         /** @var \App\Models\User $user */
         $user = Auth::user();
-
         $libraryEntry = $user->library()->where('game_id', $game->id)->first();
 
         if ($libraryEntry) {
@@ -130,10 +123,8 @@ class GameController extends Controller
     public function updateStatus(Request $request, $slug)
     {
         $game = $this->ensureGameExists($slug);
-
         /** @var \App\Models\User $user */
         $user = Auth::user();
-
         $request->validate(['status' => 'nullable|in:playing,completed,on_hold,dropped,backlog']);
 
         $libraryEntry = $user->library()->where('game_id', $game->id)->first();
@@ -159,6 +150,7 @@ class GameController extends Controller
         $existingReview = \App\Models\Review::where('user_id', Auth::id())
             ->where('game_id', $game->id)
             ->first();
+            
         if ($existingReview) {
             return back()->with('error', 'Ya has reseñado este juego.');
         }
@@ -175,25 +167,6 @@ class GameController extends Controller
     public function updateJournal(Request $request, $slug)
     {
         $game = $this->ensureGameExists($slug);
-
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        $data = [
-            'hours_played' => $request->hours_played,
-            'started_at' => $request->started_at,
-            'finished_at' => $request->finished_at,
-            'private_notes' => $request->private_notes,
-        ];
-
-        $libraryEntry = $user->library()->where('game_id', $game->id)->first();
-
-        if ($libraryEntry) {
-            $user->library()->updateExistingPivot($game->id, $data);
-        } else {
-            $user->library()->attach($game->id, $data);
-        }
-
         return back()->with('message', 'Diario actualizado.');
     }
 }

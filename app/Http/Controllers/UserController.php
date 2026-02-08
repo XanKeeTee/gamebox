@@ -89,6 +89,7 @@ class UserController extends Controller
      */
     public function toggleFollow(User $user)
     {
+        /** @var \App\Models\User $me */
         $me = Auth::user();
 
         // No puedes seguirte a ti mismo
@@ -126,13 +127,14 @@ class UserController extends Controller
             'slot' => 'required|integer|min:1|max:5',
         ]);
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $gameId = $request->game_id;
         $slot = $request->slot;
 
         // 1. Limpiar el slot si ya estaba ocupado por otro juego
         // (Buscamos si hay algún juego en ese slot y lo ponemos a null)
-        $user->library()->wherePivot('favorite_slot', $slot)->updateExistingPivot(
+        $user->library()->wherePivot('favorite_slot', $slot)->get()->each->pivot->update(
             $user->library()->wherePivot('favorite_slot', $slot)->pluck('game_id'),
             ['favorite_slot' => null]
         );
