@@ -7,7 +7,7 @@
         
         <div class="bg-[#20242c] pt-12 pb-6 border-b border-gray-800">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center md:items-end gap-6">
-                <div class="w-32 h-32 rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl shrink-0">
+                <div class="w-32 h-32 rounded-full overflow-hidden border-4 border-[#14181c] shadow-2xl shrink-0 relative group">
                     @if($user->avatar) <img src="{{ asset('storage/' . $user->avatar) }}" class="w-full h-full object-cover">
                     @else <div class="w-full h-full bg-gray-700 flex items-center justify-center text-4xl font-bold text-white">{{ substr($user->name, 0, 1) }}</div> @endif
                 </div>
@@ -52,11 +52,8 @@
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-8 overflow-x-auto">
                 <a href="{{ route('users.show', ['name' => $user->name]) }}" class="py-4 font-bold transition {{ $tab == 'profile' ? 'text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white' }}">Perfil</a>
                 <a href="{{ route('users.show', ['name' => $user->name, 'tab' => 'games']) }}" class="py-4 font-bold transition {{ $tab == 'games' ? 'text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white' }}">Juegos</a>
-                
                 <a href="{{ route('users.show', ['name' => $user->name, 'tab' => 'lists']) }}" class="py-4 font-bold transition {{ $tab == 'lists' ? 'text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white' }}">Listas</a>
-                
                 <a href="{{ route('users.show', ['name' => $user->name, 'tab' => 'reviews']) }}" class="py-4 font-bold transition {{ $tab == 'reviews' ? 'text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white' }}">Reviews</a>
-                
                 @if($tab == 'followers' || $tab == 'following')
                     <a href="#" class="py-4 font-bold text-white border-b-2 border-green-500 capitalize">{{ $tab == 'followers' ? 'Seguidores' : 'Siguiendo' }}</a>
                 @endif
@@ -68,12 +65,66 @@
             @if($tab == 'profile')
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     <div class="lg:col-span-1 space-y-8"><div><h3 class="text-gray-400 font-bold uppercase text-xs tracking-widest mb-3 border-b border-gray-800 pb-1">Bio</h3><p class="text-gray-300 text-sm whitespace-pre-line">{{ $user->bio ?? 'Sin biografía.' }}</p></div></div>
+                    
                     <div class="lg:col-span-3 space-y-10">
-                        <section><div class="flex items-center gap-2 mb-4"><span class="text-yellow-500 text-xl">♛</span><h2 class="text-2xl font-bold text-white">Juegos Favoritos</h2></div><div class="grid grid-cols-5 gap-4">@for ($i = 1; $i <= 5; $i++) @php $gameInSlot = $favorites->firstWhere('pivot.favorite_slot', $i); $isOwner = Auth::id() === $user->id; @endphp @if($gameInSlot || $isOwner) <div class="aspect-[2/3] rounded-lg overflow-hidden relative group transition-all duration-300 {{ !$gameInSlot ? 'bg-[#1b1e24] border-2 border-dashed border-gray-700 hover:border-green-500' : 'shadow-lg hover:ring-2 hover:ring-green-500' }} {{ $isOwner ? 'cursor-pointer' : '' }}" @if($isOwner) @click="openModal({{ $i }})" @endif> @if($gameInSlot) <a href="{{ route('games.show', $gameInSlot->slug) }}" class="block w-full h-full"><img src="{{ $gameInSlot->cover_url }}" class="w-full h-full object-cover"></a> @if($isOwner) <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition"><span class="text-white font-bold text-xs bg-black/50 px-2 py-1 rounded border border-white/20">Cambiar</span></div> @endif @else <div class="w-full h-full flex flex-col items-center justify-center text-gray-600 group-hover:text-green-500 transition"><span class="text-4xl font-light mb-1">+</span><span class="text-[10px] font-bold uppercase tracking-wider">Añadir</span></div> @endif </div> @endif @endfor</div></section>
+                        <section>
+                            <div class="flex items-center gap-2 mb-4"><span class="text-yellow-500 text-xl">♛</span><h2 class="text-2xl font-bold text-white">Juegos Favoritos</h2></div>
+                            <div class="grid grid-cols-5 gap-4">
+                                @for ($i = 1; $i <= 5; $i++) 
+                                    @php $gameInSlot = $favorites->firstWhere('pivot.favorite_slot', $i); $isOwner = Auth::id() === $user->id; @endphp 
+                                    <div class="aspect-[2/3] rounded-lg overflow-hidden relative group transition-all duration-300 {{ !$gameInSlot ? 'bg-[#1b1e24] border-2 border-dashed border-gray-700 hover:border-green-500' : 'shadow-lg hover:ring-2 hover:ring-green-500' }} {{ $isOwner ? 'cursor-pointer' : '' }}" 
+                                         @if($isOwner) @click="openModal({{ $i }})" @endif> 
+                                        @if($gameInSlot) 
+                                            <a href="{{ route('games.show', $gameInSlot->slug) }}" class="block w-full h-full"><img src="{{ $gameInSlot->cover_url }}" class="w-full h-full object-cover"></a> 
+                                            @if($isOwner) <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition"><span class="text-white font-bold text-xs bg-black/50 px-2 py-1 rounded border border-white/20">Cambiar</span></div> @endif 
+                                        @else 
+                                            <div class="w-full h-full flex flex-col items-center justify-center text-gray-600 group-hover:text-green-500 transition"><span class="text-4xl font-light mb-1">+</span><span class="text-[10px] font-bold uppercase tracking-wider">Añadir</span></div> 
+                                        @endif 
+                                    </div> 
+                                @endfor
+                            </div>
+                        </section>
+                        
                         <section class="border-t border-gray-800 pt-8 grid grid-cols-3 gap-4 text-center"><div><span class="block text-4xl font-black text-white">{{ $stats['total_reviews'] }}</span><span class="text-xs text-gray-500 uppercase font-bold">Reviews</span></div><div class="border-l border-gray-800"><span class="block text-4xl font-black text-white">{{ $stats['total_liked'] }}</span><span class="text-xs text-gray-500 uppercase font-bold">Likes</span></div><div class="border-l border-gray-800"><span class="block text-4xl font-black text-white">{{ $stats['total_wish'] }}</span><span class="text-xs text-gray-500 uppercase font-bold">Backlog</span></div></section>
                     </div>
                 </div>
-                @if(Auth::id() === $user->id)<div x-show="modalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/80 backdrop-blur-sm p-4" x-transition.opacity><div @click.away="modalOpen = false" class="bg-[#24282f] w-full max-w-xl rounded-xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col max-h-[80vh]"><div class="p-4 border-b border-gray-700 flex justify-between items-center bg-[#1b1e24]"><h3 class="text-white font-bold">Elige tu Top #<span x-text="currentSlot"></span></h3><button @click="modalOpen = false" class="text-gray-400 hover:text-white px-2">✕</button></div><div class="p-4 bg-[#24282f]"><input type="text" id="modal-search" x-model="searchQuery" @input.debounce.300ms="search()" placeholder="Busca un juego..." class="w-full bg-[#14181c] text-white border border-gray-600 rounded-lg p-3 focus:ring-green-500 focus:border-green-500 outline-none placeholder-gray-500"></div><div class="overflow-y-auto p-2 flex-1 space-y-1"><template x-if="isLoading"><div class="text-center p-4 text-gray-500 animate-pulse">Buscando...</div></template><template x-for="game in searchResults" :key="game.id"><form action="{{ route('profile.setFavorite') }}" method="POST">@csrf <input type="hidden" name="slot" :value="currentSlot"><input type="hidden" name="game_id" :value="game.id"><button type="submit" class="w-full flex items-center gap-3 p-2 hover:bg-[#343843] rounded-lg transition text-left group border border-transparent hover:border-gray-600"><div class="w-12 h-16 bg-gray-800 rounded overflow-hidden shrink-0"><img :src="game.cover_url" class="w-full h-full object-cover"></div><div class="flex-1"><div class="text-white font-bold text-sm group-hover:text-green-400" x-text="game.name"></div><div class="text-gray-500 text-xs" x-text="new Date(game.first_release_date).getFullYear()"></div></div><div class="text-green-500 text-sm font-bold opacity-0 group-hover:opacity-100 transition mr-2">Seleccionar</div></button></form></template></div></div></div>@endif
+
+                @if(Auth::id() === $user->id)
+                <div x-show="modalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/80 backdrop-blur-sm p-4" x-transition.opacity>
+                    <div @click.away="modalOpen = false" class="bg-[#24282f] w-full max-w-xl rounded-xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col max-h-[80vh]">
+                        <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-[#1b1e24]">
+                            <h3 class="text-white font-bold">Elige tu Top #<span x-text="currentSlot"></span></h3>
+                            <button @click="modalOpen = false" class="text-gray-400 hover:text-white px-2">✕</button>
+                        </div>
+                        <div class="p-4 bg-[#24282f]">
+                            <input type="text" id="modal-search" x-model="searchQuery" @input.debounce.300ms="search()" placeholder="Busca un juego..." class="w-full bg-[#14181c] text-white border border-gray-600 rounded-lg p-3 focus:ring-green-500 focus:border-green-500 outline-none placeholder-gray-500">
+                        </div>
+                        <div class="overflow-y-auto p-2 flex-1 space-y-1">
+                            <template x-if="isLoading"><div class="text-center p-4 text-gray-500 animate-pulse">Buscando...</div></template>
+                            
+                            <template x-for="game in searchResults" :key="game.id">
+                                <form action="{{ route('profile.setFavorite') }}" method="POST">
+                                    @csrf 
+                                    <input type="hidden" name="slot" :value="currentSlot">
+                                    
+                                    <input type="hidden" name="slug" :value="game.slug">
+                                    
+                                    <button type="submit" class="w-full flex items-center gap-3 p-2 hover:bg-[#343843] rounded-lg transition text-left group border border-transparent hover:border-gray-600">
+                                        <div class="w-12 h-16 bg-gray-800 rounded overflow-hidden shrink-0">
+                                            <img :src="game.cover_url" class="w-full h-full object-cover">
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="text-white font-bold text-sm group-hover:text-green-400" x-text="game.name"></div>
+                                            <div class="text-gray-500 text-xs" x-text="new Date(game.first_release_date).getFullYear()"></div>
+                                        </div>
+                                        <div class="text-green-500 text-sm font-bold opacity-0 group-hover:opacity-100 transition mr-2">Seleccionar</div>
+                                    </button>
+                                </form>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                @endif
             @endif
 
             @if($tab == 'games')
@@ -84,52 +135,14 @@
                         @endforeach
                     </div>
                     <div class="mt-8">{{ $games_list->appends(['tab' => 'games'])->links() }}</div>
-                @else
-                    <div class="text-center py-20 text-gray-500"><div class="text-4xl mb-2">🎮</div><p>Está vacío.</p></div>
-                @endif
+                @else <div class="text-center py-20 text-gray-500"><div class="text-4xl mb-2">🎮</div><p>Está vacío.</p></div> @endif
             @endif
 
             @if($tab == 'lists')
                 @if($lists->count() > 0)
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        @foreach($lists as $list)
-                            <a href="{{ route('lists.show', $list->id) }}" class="group block">
-                                <div class="bg-[#20242c] rounded-xl overflow-hidden border border-gray-800 shadow-lg hover:border-gray-600 hover:ring-1 hover:ring-gray-600 transition-all">
-                                    
-                                    <div class="h-32 bg-[#14181c] grid grid-cols-4 gap-0.5 p-0.5">
-                                        @foreach($list->games->take(4) as $gamePreview)
-                                            <div class="h-full bg-gray-800 relative overflow-hidden">
-                                                <img src="{{ $gamePreview->cover_url }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition">
-                                            </div>
-                                        @endforeach
-                                        @for($i = $list->games->count(); $i < 4; $i++)
-                                            <div class="h-full bg-[#1b1e24] flex items-center justify-center">
-                                                <span class="text-gray-700 text-xs">•</span>
-                                            </div>
-                                        @endfor
-                                    </div>
-
-                                    <div class="p-4">
-                                        <h3 class="font-bold text-white text-lg truncate group-hover:text-green-400 transition">{{ $list->title }}</h3>
-                                        <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
-                                            <span>{{ $list->games->count() }} juegos</span>
-                                            <span>Actualizada {{ $list->updated_at->diffForHumans() }}</span>
-                                        </div>
-                                        @if($list->description)
-                                            <p class="text-gray-400 text-xs mt-3 line-clamp-2">{{ $list->description }}</p>
-                                        @endif
-                                    </div>
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">@foreach($lists as $list) <a href="{{ route('lists.show', $list->id) }}" class="group block"><div class="bg-[#20242c] rounded-xl overflow-hidden border border-gray-800 shadow-lg hover:border-gray-600 hover:ring-1 hover:ring-gray-600 transition-all"><div class="h-32 bg-[#14181c] grid grid-cols-4 gap-0.5 p-0.5">@foreach($list->games->take(4) as $gamePreview) <div class="h-full bg-gray-800 relative overflow-hidden"><img src="{{ $gamePreview->cover_url }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition"></div> @endforeach @for($i = $list->games->count(); $i < 4; $i++) <div class="h-full bg-[#1b1e24] flex items-center justify-center"><span class="text-gray-700 text-xs">•</span></div> @endfor</div><div class="p-4"><h3 class="font-bold text-white text-lg truncate group-hover:text-green-400 transition">{{ $list->title }}</h3><div class="flex justify-between items-center mt-2 text-xs text-gray-500"><span>{{ $list->games->count() }} juegos</span><span>Actualizada {{ $list->updated_at->diffForHumans() }}</span></div>@if($list->description) <p class="text-gray-400 text-xs mt-3 line-clamp-2">{{ $list->description }}</p> @endif</div></div></a> @endforeach</div>
                     <div class="mt-8">{{ $lists->appends(['tab' => 'lists'])->links() }}</div>
-                @else
-                    <div class="text-center py-20 text-gray-500">
-                        <div class="text-4xl mb-2">📋</div>
-                        <p>No ha creado ninguna lista todavía.</p>
-                    </div>
-                @endif
+                @else <div class="text-center py-20 text-gray-500"><div class="text-4xl mb-2">📋</div><p>No ha creado ninguna lista todavía.</p></div> @endif
             @endif
 
             @if($tab == 'reviews')

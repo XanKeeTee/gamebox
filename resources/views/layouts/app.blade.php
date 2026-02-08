@@ -8,28 +8,23 @@
         <title>{{ config('app.name', 'GameBox') }}</title>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
-        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,900&display=swap" rel="stylesheet" />
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-[#14181c] text-gray-100">
-        <div class="min-h-screen">
-            
+    <body class="font-sans antialiased bg-[#0d1117] text-gray-200">
+        <div class="min-h-screen flex flex-col">
             @include('layouts.navigation')
 
-            @if (isset($header))
-                <header class="bg-[#20242c] shadow border-b border-gray-800">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endif
-
-            <main>
+            <main class="flex-1">
                 {{ $slot }}
             </main>
+
+            <footer class="bg-[#161b22] border-t border-gray-800 py-8 mt-12">
+                <div class="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
+                    <p>&copy; {{ date('Y') }} GameBox. Data provided by IGDB.</p>
+                </div>
+            </footer>
         </div>
     </body>
 </html>

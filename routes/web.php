@@ -17,40 +17,46 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Redirigir inicio
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// RUTAS PÚBLICAS
+// --- RUTAS DE JUEGOS (Orden Crítico) ---
 Route::get('/games', [GameController::class, 'index'])->name('games.index');
-Route::get('/games/{slug}', [GameController::class, 'show'])->name('games.show'); // CORREGIDO: {slug}
 
+// 1. PRIMERO la ruta específica de búsqueda JSON
+Route::get('/games/search/json', [GameController::class, 'searchJson'])->name('games.searchJson');
+
+// 2. DESPUÉS la ruta dinámica {slug}, si no la de arriba fallaría
+Route::get('/games/{slug}', [GameController::class, 'show'])->name('games.show');
+
+
+// Comunidad
 Route::get('/community', [UserController::class, 'index'])->name('users.index');
 Route::get('/user/{name}', [UserController::class, 'show'])->name('users.show');
 
 // RUTAS PRIVADAS
 Route::middleware('auth')->group(function () {
-
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/library', [LibraryController::class, 'index'])->name('library.index');
     
-    // --- AQUÍ ESTABA EL ERROR ---
-    // Hemos cambiado {game:slug} por {slug} y apuntado todo a GameController
+    // Acciones de Juego
     Route::post('/games/{slug}/like', [GameController::class, 'toggleLike'])->name('games.like');
     Route::post('/games/{slug}/wishlist', [GameController::class, 'toggleWishlist'])->name('games.wishlist');
     Route::post('/games/{slug}/status', [GameController::class, 'updateStatus'])->name('games.status');
     Route::post('/games/{slug}/journal', [GameController::class, 'updateJournal'])->name('games.updateJournal');
-    
-    // Ruta de Reviews arreglada:
     Route::post('/games/{slug}/reviews', [GameController::class, 'storeReview'])->name('reviews.store');
 
-    Route::post('/profile/favorite', [ProfileController::class, 'setFavorite'])->name('profile.setFavorite');
+    // Perfil y Social
+    Route::post('/profile/favorite', [UserController::class, 'setFavorite'])->name('profile.setFavorite'); // Apunta a UserController
     Route::post('/user/{user}/follow', [FollowController::class, 'toggle'])->name('users.follow');
+    
+    // Reviews
     Route::post('/reviews/{review}/vote', [ReviewActionController::class, 'toggleVote'])->name('reviews.vote');
     Route::post('/reviews/{review}/comment', [ReviewActionController::class, 'storeComment'])->name('reviews.comment');
     
+    // Listas
     Route::post('/lists', [ListController::class, 'store'])->name('lists.store');
     Route::post('/games/{slug}/add-to-list', [ListController::class, 'addGame'])->name('lists.addGame');
     Route::get('/lists/{list}', [ListController::class, 'show'])->name('lists.show');

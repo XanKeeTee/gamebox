@@ -18,10 +18,9 @@ class GameController extends Controller
         $this->igdb = $igdb;
     }
 
-    // --- EXPLORAR / BUSCADOR ---
     public function index(Request $request)
     {
-        $page = $request->input('page', 1);
+        $page = max(1, $request->input('page', 1));
         $search = $request->input('q');
         
         $filters = [
@@ -31,10 +30,12 @@ class GameController extends Controller
         ];
 
         $apiGames = $this->igdb->getGames($page, $search, $filters);
+        // Usamos countGames si existe, si no 9999 (para evitar errores si no has actualizado el servicio)
+        $totalGames = method_exists($this->igdb, 'countGames') ? $this->igdb->countGames($search, $filters) : 9999;
 
         $games = new LengthAwarePaginator(
             $apiGames,
-            9999, 
+            $totalGames, 
             24,
             $page,
             ['path' => $request->url(), 'query' => $request->query()]
@@ -69,33 +70,28 @@ class GameController extends Controller
         return view('games.show', compact('game', 'userLists'));
     }
 
-    // AUXILIAR: GUARDA JUEGO SI NO EXISTE
     private function ensureGameExists($slug)
     {
-        // 1. Intentamos buscar por slug primero
         $game = Game::where('slug', $slug)->first();
         if ($game) return $game;
 
-        // 2. Si no está, lo pedimos a la API
         $apiGame = $this->igdb->getGameBySlug($slug);
         if (!$apiGame) abort(404);
 
-        // 3. Lo guardamos (usando updateOrCreate por si el ID ya existe con otro slug)
         return Game::updateOrCreate(
-            ['igdb_id' => $apiGame->igdb_id], // Buscamos por ID de IGDB
+            ['igdb_id' => $apiGame->igdb_id],
             [
                 'name' => $apiGame->name,
                 'slug' => $apiGame->slug,
                 'summary' => $apiGame->summary,
                 'first_release_date' => $apiGame->first_release_date,
                 'cover_url' => $apiGame->cover_url,
-                'igdb_id' => $apiGame->igdb_id // <--- ¡ESTA ERA LA LÍNEA QUE FALTABA!
+                'igdb_id' => $apiGame->igdb_id
             ]
         );
     }
 
-    // --- ACCIONES ---
-
+    // ACCIONES
     public function toggleLike(Request $request, $slug) {
         $game = $this->ensureGameExists($slug);
         /** @var \App\Models\User $user */
@@ -150,5 +146,19 @@ class GameController extends Controller
     public function updateJournal(Request $request, $slug) {
         $game = $this->ensureGameExists($slug);
         return back()->with('message', 'Diario actualizado.');
+    }
+
+    // --- LA FUNCIÓN QUE FALTABA ---
+    public function searchJson(Request $request)
+    {
+        $query = $request->input('q');
+        if (!$query || strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        // Buscamos en IGDB (esto devuelve ID=0 porque viene de API)
+        $games = $this->igdb->getGames(1, $query);
+
+        return response()->json($games);
     }
 }
