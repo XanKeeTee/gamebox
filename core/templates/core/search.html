@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}Buscar - Gamebox{% endblock %}
+
+{% block content %}
+<style>
+    /* Animación de entrada fluida */
+    @keyframes fadeInUp {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+</style>
+
+<div class="max-w-[1400px] mx-auto px-8 py-12">
+    <div class="mb-10">
+        <h1 class="text-4xl font-black text-white mb-2">Búsqueda</h1>
+        <p class="text-gray-400 text-sm">Encuentra juegos o busca usuarios usando <span class="text-[var(--user-accent)] font-bold">@nombre</span>.</p>
+    </div>
+
+    <div class="relative max-w-4xl bg-[#161b22] border-2 border-gray-800 rounded-2xl flex items-center px-6 py-4 focus-within:border-blue-500 transition-colors shadow-2xl mb-8">
+        <i class="fa-solid fa-magnifying-glass text-gray-500 text-xl shrink-0"></i>
+        <input type="text" id="liveSearchInput" placeholder="Busca juegos o @usuarios..." class="bg-transparent border-none text-lg text-white ml-4 w-full focus:outline-none placeholder-gray-600" autocomplete="off">
+        <button id="clearSearchBtn" class="text-gray-600 hover:text-white transition-colors hidden"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+
+    <div id="gameFilters" class="flex items-center gap-3 mb-10 overflow-x-auto custom-scrollbar pb-2">
+        <button class="px-5 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-colors"><i class="fa-solid fa-fire"></i> Popular</button>
+        <button class="px-5 py-2 bg-[#161b22] border border-gray-800 text-gray-400 hover:text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-colors"><i class="fa-solid fa-star"></i> Mejor Valorados</button>
+    </div>
+
+    <div id="resultsContainer" class="min-h-[400px]">
+        <div class="flex flex-col items-center justify-center h-64 text-gray-600">
+            <i class="fa-solid fa-magnifying-glass text-4xl mb-4 opacity-50"></i>
+            <p class="text-sm font-bold">Empieza a escribir para ver resultados en tiempo real.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const searchInput = document.getElementById('liveSearchInput');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    const gameFilters = document.getElementById('gameFilters');
+    let typingTimer;
+
+    // Mostrar/ocultar el botón de la cruz
+    searchInput.addEventListener('input', () => {
+        if(searchInput.value.length > 0) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+    });
+
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearBtn.classList.add('hidden');
+        resultsContainer.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-64 text-gray-600">
+                <i class="fa-solid fa-magnifying-glass text-4xl mb-4 opacity-50"></i>
+                <p class="text-sm font-bold">Empieza a escribir para ver resultados en tiempo real.</p>
+            </div>
+        `;
+    });
+
+    // Lógica en vivo
+    searchInput.addEventListener('keyup', () => {
+        clearTimeout(typingTimer);
+        const query = searchInput.value.trim();
+
+        // Ocultar filtros si es búsqueda de usuario
+        if(query.startsWith('@')) gameFilters.style.display = 'none';
+        else gameFilters.style.display = 'flex';
+
+        if (query.length < 2 && !query.startsWith('@')) {
+            if(query.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-64 text-gray-600">
+                        <i class="fa-solid fa-magnifying-glass text-4xl mb-4 opacity-50"></i>
+                        <p class="text-sm font-bold">Empieza a escribir para ver resultados en tiempo real.</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        // Loader animado
+        resultsContainer.innerHTML = `
+            <div class="flex justify-center items-center h-64">
+                <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500"></i>
+            </div>
+        `;
+
+        typingTimer = setTimeout(() => {
+            fetch(`/search/?ajax=1&q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+                resultsContainer.innerHTML = '';
+                
+                if (data.results.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-64 text-gray-600">
+                            <i class="fa-solid fa-ghost text-4xl mb-4 opacity-50"></i>
+                            <p class="text-sm font-bold">No hemos encontrado nada.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // SI LOS RESULTADOS SON USUARIOS
+                if (data.search_type === 'user') {
+                    let html = '<div class="space-y-3 max-w-4xl">';
+                    data.results.forEach((user, index) => {
+                        const avatar = user.avatar_url ? user.avatar_url : 'https://ui-avatars.com/api/?name=' + user.username + '&background=3b82f6&color=fff';
+                        const animDelay = index * 0.05; // Efecto cascada
+                        
+                        html += `
+                            <a href="/profile/${user.username}/" class="flex items-center gap-4 bg-[#161b22] border border-gray-800 hover:border-blue-500 p-4 rounded-2xl transition-all duration-300 transform hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] group" style="animation: fadeInUp 0.4s ease-out ${animDelay}s both;">
+                                <img src="${avatar}" class="w-14 h-14 rounded-full object-cover border-2 border-[#0d1117] group-hover:border-blue-500 transition-colors">
+                                <div class="flex-1">
+                                    <p class="text-white font-bold text-lg">${user.username}</p>
+                                    <p class="text-gray-500 text-sm">@${user.username}</p>
+                                </div>
+                                <div class="flex gap-4 text-gray-600 group-hover:text-gray-400">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </div>
+                            </a>
+                        `;
+                    });
+                    html += '</div>';
+                    resultsContainer.innerHTML = html;
+                } 
+                // SI LOS RESULTADOS SON JUEGOS
+                else {
+                    let html = '<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">';
+                    data.results.forEach((game, index) => {
+                        const cover = (game.cover && game.cover.url) ? game.cover.url.replace('t_thumb', 't_cover_big') : 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.png';
+                        const animDelay = index * 0.05; // Efecto cascada
+                        
+                        html += `
+                            <a href="/game/${game.id}/" class="group block" style="animation: fadeInUp 0.5s ease-out ${animDelay}s both;">
+                                <div class="relative aspect-[3/4] rounded-2xl overflow-hidden border border-gray-800 group-hover:border-blue-500 shadow-lg transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-[0_10px_30px_rgba(59,130,246,0.2)]">
+                                    <img src="${cover}" class="w-full h-full object-cover">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-[#0d1117]/20 to-transparent opacity-90 group-hover:opacity-100 transition-opacity"></div>
+                                    <div class="absolute bottom-0 inset-x-0 p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                                        <h3 class="text-white font-bold text-sm leading-tight line-clamp-2">${game.name}</h3>
+                                        <p class="text-[10px] text-blue-400 font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">VER FICHA</p>
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    });
+                    html += '</div>';
+                    resultsContainer.innerHTML = html;
+                }
+            })
+            .catch(err => {
+                resultsContainer.innerHTML = `<div class="text-red-500 text-center mt-10">Error de conexión con el servidor.</div>`;
+            });
+        }, 400); // Espera 400ms después de que el usuario deje de teclear
+    });
+</script>
+{% endblock %}

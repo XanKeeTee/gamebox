@@ -1,0 +1,568 @@
+{% extends 'base.html' %}
+
+{% block title %}Feed de Actividad - Gamebox{% endblock %}
+
+{% block content %}
+<style>
+    .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+    .main-tab { position: relative; padding-bottom: 0.75rem; color: #6b7280; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; transition: color 0.2s; }
+    .main-tab:hover { color: white; }
+    .main-tab.active { color: white; }
+    .tab-indicator { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background-color: transparent; transition: background-color 0.2s; box-shadow: none; }
+    .main-tab.active .tab-indicator { background-color: #3b82f6; box-shadow: 0 -2px 10px rgba(59,130,246,0.5); }
+    .sub-tab { background-color: #0d1117; border: 1px solid #1f2937; color: #9ca3af; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; transition: all 0.2s; }
+    .sub-tab:hover { background-color: #161b22; border-color: #374151; color: white; }
+    .sub-tab.active { background-color: rgba(59,130,246,0.1); border-color: #3b82f6; color: #3b82f6; }
+</style>
+
+<div id="uploadStoryModal" class="fixed inset-0 z-[150] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div onclick="closeStoryUpload()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-lg bg-[#0d1117] border border-gray-800 rounded-3xl p-8 shadow-2xl transform scale-95 transition-transform duration-300" id="uploadStoryContent">
+        
+        <div class="flex justify-between items-start mb-8 border-b border-gray-800 pb-6">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-[#161b22] rounded-full flex items-center justify-center border border-gray-800 shadow-inner">
+                    <i class="fa-solid fa-photo-film text-blue-500 text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black text-white uppercase tracking-wider">Añadir Historia</h2>
+                    <p class="text-[10px] text-gray-500 font-bold tracking-widest mt-1">1 / 5 HISTORIAS PERMITIDAS</p>
+                </div>
+            </div>
+            <button onclick="closeStoryUpload()" class="text-gray-500 hover:text-white transition-colors w-8 h-8 flex items-center justify-center bg-[#161b22] rounded-full border border-gray-800 hover:border-gray-600"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <form id="storyForm">
+            {% csrf_token %}
+            
+            <div class="mb-6">
+                <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Vincular a un juego (Opcional)</label>
+                <div class="relative">
+                    <select name="game_name" id="storyGameSelect" class="w-full bg-[#161b22] border border-gray-800 rounded-xl p-4 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer text-sm font-bold shadow-inner">
+                        <option value="" class="text-gray-500">Selecciona un juego para esta historia...</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                </div>
+            </div>
+
+            <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-blue-500 bg-[#161b22] rounded-2xl p-10 flex flex-col items-center justify-center cursor-pointer transition-colors mb-8 shadow-inner group">
+                <div class="w-16 h-16 bg-[#0d1117] rounded-full flex items-center justify-center mb-4 border border-gray-800 group-hover:scale-110 group-hover:border-blue-500 transition-all duration-300">
+                    <i class="fa-solid fa-arrow-up-from-bracket text-gray-400 group-hover:text-blue-500 text-xl transition-colors"></i>
+                </div>
+                <p class="text-white text-sm font-bold mb-2 text-center">Arrastra una imagen o haz clic para explorar</p>
+                <p class="text-gray-500 text-[10px] font-black tracking-widest uppercase">JPG, PNG, WebP — Max 10MB</p>
+                <p id="fileNameDisplay" class="text-blue-500 text-xs mt-4 hidden font-black uppercase tracking-wider bg-blue-500/10 px-3 py-1 rounded-md border border-blue-500/30"></p>
+            </div>
+            <input type="file" id="storyFileInput" name="image" accept="image/*" class="hidden">
+
+            <button type="button" onclick="uploadStory()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl transition-all duration-300 uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(37,99,235,0.2)] hover:shadow-[0_0_25px_rgba(37,99,235,0.4)] flex justify-center items-center gap-2">
+                Publicar Historia <i class="fa-regular fa-paper-plane"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="viewStoryModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="absolute inset-0 bg-black/95 backdrop-blur-md"></div>
+    <button onclick="closeStory()" class="absolute top-6 right-6 z-10 text-white text-3xl"><i class="fa-solid fa-xmark"></i></button>
+    
+    <div class="relative w-full max-w-[400px] h-[80vh] flex flex-col justify-center">
+        <div id="storyProgressContainer" class="absolute top-4 left-0 right-0 flex gap-1 px-4 z-10"></div>
+        <div class="absolute top-8 left-4 flex items-center gap-3 z-10">
+            <div id="storyAvatar" class="w-10 h-10 rounded-full overflow-hidden border border-gray-600 bg-[#161b22]"></div>
+            <div class="flex flex-col">
+                <span id="storyUsername" class="text-white font-bold drop-shadow-md text-sm"></span>
+                <span id="storyGameName" class="text-blue-400 font-bold drop-shadow-md text-[10px] uppercase tracking-wider"></span>
+            </div>
+        </div>
+        <img id="storyImage" src="" class="w-full h-full object-cover rounded-2xl shadow-2xl">
+        <div onclick="prevStory()" class="absolute top-0 left-0 bottom-0 w-1/2 cursor-pointer z-0"></div>
+        <div onclick="nextStory()" class="absolute top-0 right-0 bottom-0 w-1/2 cursor-pointer z-0"></div>
+    </div>
+</div>
+
+<div class="max-w-[1400px] mx-auto px-6 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+        
+        <div>
+            <div class="flex items-center justify-between mb-8">
+                <h1 class="text-4xl font-black text-white italic tracking-tighter uppercase">Actividad de la red</h1>
+            </div>
+
+            <div id="storiesWrapper" class="flex items-center gap-6 mb-8 overflow-x-auto custom-scrollbar pb-2">
+                {% if user.is_authenticated %}
+                <div onclick="openStoryUpload()" class="flex flex-col items-center gap-2 cursor-pointer shrink-0 group order-first">
+                    <div class="relative w-16 h-16 rounded-full border-2 border-[#161b22] group-hover:border-blue-500 transition-colors p-0.5">
+                        {% if user.profile.avatar %}
+                        <img src="{{ user.profile.avatar.url }}" class="w-full h-full rounded-full object-cover bg-[#0d1117]">
+                        {% else %}
+                        <div class="w-full h-full rounded-full bg-[#161b22] flex items-center justify-center text-white font-black text-xl">{{ user.username|make_list|first|upper }}</div>
+                        {% endif %}
+                        <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white border-2 border-[#0d1117]">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                        </div>
+                    </div>
+                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider group-hover:text-white transition-colors">Tu Historia</span>
+                </div>
+                {% endif %}
+
+                {% for story in stories_list %}
+                <div onclick="openStory('{{ story.username|escapejs }}')" class="story-item flex flex-col items-center gap-2 cursor-pointer shrink-0 group" data-username="{{ story.username|escapejs }}" data-viewed="0">
+                    <div class="story-ring relative w-16 h-16 rounded-full border-2 border-fuchsia-500 transition-colors p-0.5 shadow-[0_0_10px_rgba(217,70,239,0.3)]">
+                        {% if story.avatar %}
+                        <img src="{{ story.avatar }}" class="w-full h-full rounded-full object-cover bg-[#0d1117]">
+                        {% else %}
+                        <div class="w-full h-full rounded-full bg-[#161b22] flex items-center justify-center text-white font-black text-xl">{{ story.username|make_list|first|upper }}</div>
+                        {% endif %}
+                    </div>
+                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider group-hover:text-white transition-colors">{{ story.username }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="flex items-center gap-8 border-b border-gray-800 mb-6">
+                <button onclick="setMainTab('todo', this)" class="main-tab active text-sm">Todo<div class="tab-indicator"></div></button>
+                <button onclick="setMainTab('siguiendo', this)" class="main-tab text-sm">Siguiendo<div class="tab-indicator"></div></button>
+                <button onclick="setMainTab('juegos', this)" class="main-tab text-sm">Juegos<div class="tab-indicator"></div></button>
+                <button onclick="setMainTab('miactividad', this)" class="main-tab text-sm">Mi Actividad<div class="tab-indicator"></div></button>
+            </div>
+
+            <div class="flex items-center gap-3 mb-10 overflow-x-auto custom-scrollbar pb-2">
+                <button onclick="setSubTab('all', this)" class="sub-tab active px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-border-all"></i> Todo</button>
+                <button onclick="setSubTab('screenshot', this)" class="sub-tab px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-camera"></i> Capturas</button>
+                <button onclick="setSubTab('guide', this)" class="sub-tab px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-book-open"></i> Guías</button>
+                <button onclick="setSubTab('review', this)" class="sub-tab px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-pen"></i> Reseñas</button>
+            </div>
+
+            <div id="feedContainer" class="space-y-6">
+                {% if not posts %}
+                    <div class="flex flex-col items-center justify-center py-20 text-center bg-[#161b22] border border-gray-800 rounded-3xl">
+                        <div class="w-20 h-20 bg-[#0d1117] rounded-full flex items-center justify-center mb-6 shadow-inner">
+                            <i class="fa-solid fa-gamepad text-3xl text-blue-500"></i>
+                        </div>
+                        <h2 class="text-xl font-black text-white uppercase tracking-wider mb-2">Sin actividad reciente</h2>
+                        <p class="text-gray-500 text-sm mb-6 max-w-sm">Sigue más juegos y usuarios para ver reseñas, capturas y guías aquí.</p>
+                        <a href="{% url 'search' %}" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors uppercase text-xs tracking-widest">Buscar</a>
+                    </div>
+                {% else %}
+                    {% for post in posts %}
+                    <div class="feed-post bg-[#161b22] border border-gray-800 rounded-[2rem] p-6 transition-opacity duration-300" 
+                         data-type="{{ post.type }}" 
+                         data-user="{{ post.user.username }}"
+                         data-game="{{ post.game_title|escapejs }}">
+                        
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-4">
+                                <a href="{% url 'profile' post.user.username %}" class="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-800 shrink-0">
+                                    {% if post.user.profile.avatar %}
+                                        <img src="{{ post.user.profile.avatar.url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                        <div class="w-full h-full flex items-center justify-center text-white font-black text-sm bg-blue-600">{{ post.user.username|make_list|first|upper }}</div>
+                                    {% endif %}
+                                </a>
+                                <div>
+                                    <h3 class="text-white font-black uppercase tracking-wider text-sm hover:text-blue-400 transition-colors">
+                                        <a href="{% url 'profile' post.user.username %}">{{ post.user.username }}</a>
+                                    </h3>
+                                    <p class="text-xs text-gray-500">
+                                        {% if post.type == 'review' %}Reseña de {% elif post.type == 'screenshot' %}Captura de {% else %}Actualización de {% endif %}
+                                        <span class="text-white font-bold">{{ post.game_title }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-gray-600 font-bold uppercase tracking-wider">{{ post.created_at|timesince }}</span>
+                        </div>
+
+                        <div class="flex gap-6 mt-4">
+                            {% if post.game_cover %}
+                            <a href="/game/{{ post.game_id|default:0 }}/" class="shrink-0">
+                                <img src="{{ post.game_cover }}" class="w-[100px] rounded-xl shadow-lg border border-gray-800">
+                            </a>
+                            {% endif %}
+                            
+                            <div class="flex-1">
+                                {% if post.rating > 0 %}
+                                <div class="flex text-yellow-500 text-xs gap-0.5 mb-2">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= post.rating %}
+                                            <i class="fa-solid fa-star"></i>
+                                        {% else %}
+                                            <i class="fa-regular fa-star text-gray-700"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                <p class="text-gray-300 text-sm leading-relaxed">"{{ post.content }}"</p>
+
+                                {% if post.image %}
+                                <div class="mt-4 rounded-xl overflow-hidden border border-gray-800">
+                                    <img src="{{ post.image.url }}" class="w-full max-h-[300px] object-cover hover:scale-[1.02] transition-transform duration-500">
+                                </div>
+                                {% endif %}
+
+                                {% if post.screenshot %}
+                                <div class="mt-4 rounded-xl overflow-hidden border border-gray-800 shadow-lg">
+                                    <img src="{{ post.screenshot.url }}" class="w-full max-h-[400px] object-cover hover:scale-[1.02] transition-transform duration-500">
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div id="noResultsMsg" class="hidden flex-col items-center justify-center py-20 text-center bg-[#161b22] border border-gray-800 rounded-3xl">
+                        <div class="w-16 h-16 bg-[#0d1117] rounded-full flex items-center justify-center mb-4">
+                            <i class="fa-solid fa-filter-circle-xmark text-2xl text-gray-600"></i>
+                        </div>
+                        <h2 class="text-sm font-black text-white uppercase tracking-wider mb-2">Nada por aquí</h2>
+                        <p class="text-gray-500 text-xs">No hay actividad que coincida con estos filtros.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6">
+                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Gamers Sugeridos
+                </h3>
+                <div class="space-y-5">
+                    {% for user_s in sugeridos %}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full border border-gray-700 overflow-hidden bg-[#0d1117]">
+                                {% if user_s.profile.avatar %}
+                                <img src="{{ user_s.profile.avatar.url }}" class="w-full h-full object-cover">
+                                {% else %}
+                                <div class="w-full h-full flex items-center justify-center text-white font-bold text-xs">{{ user_s.username|make_list|first|upper }}</div>
+                                {% endif %}
+                            </div>
+                            <p class="text-xs font-black text-white uppercase tracking-wider truncate max-w-[100px]">{{ user_s.username }}</p>
+                        </div>
+                        <a href="{% url 'profile' user_s.username %}" class="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-blue-400">Seguir</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6">
+                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-fuchsia-500"></i> Tendencias
+                </h3>
+                <div class="space-y-4">
+                    {% for t_game in trending_games|slice:":5" %}
+                    <a href="/game/{{ t_game.id }}/" class="flex items-center gap-4 group">
+                        <span class="text-xl font-black text-gray-700 group-hover:text-fuchsia-500 transition-colors w-4">{{ forloop.counter }}</span>
+                        <!-- AÑADIDO: Carátula de Tendencias -->
+                        <img src="{{ t_game.cover_url|default:t_game.cover.url|default:'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.png' }}" class="w-10 h-14 rounded-lg object-cover border border-gray-800 group-hover:border-fuchsia-500 transition-colors">
+                        <div class="flex-1 border-b border-gray-800 pb-4 group-hover:border-fuchsia-500/30 transition-colors">
+                            <p class="text-xs font-black text-gray-300 uppercase tracking-wider group-hover:text-white transition-colors line-clamp-1 mb-1">{{ t_game.name }}</p>
+                            <div class="w-full bg-[#0d1117] h-1 rounded-full overflow-hidden">
+                                <div class="bg-gradient-to-r from-blue-500 to-fuchsia-500 h-full w-[{{ forloop.counter|add:"60" }}%]"></div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let currentMainTab = 'todo';
+    let currentSubTab = 'all';
+    
+    const currentUser = "{{ request.user.username }}";
+    const userGames = JSON.parse('{{ user_games|safe|default:"[]" }}');
+
+    function setMainTab(tabName, btn) {
+        currentMainTab = tabName;
+        document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        applyFilters();
+    }
+
+    function setSubTab(tabName, btn) {
+        currentSubTab = tabName;
+        document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const posts = document.querySelectorAll('.feed-post');
+        let visibleCount = 0;
+
+        posts.forEach(post => {
+            const postType = post.getAttribute('data-type');
+            const postUser = post.getAttribute('data-user');
+            const postGame = post.getAttribute('data-game');
+            const hasImage = post.innerHTML.includes('screenshots/');
+            
+            let matchSub = (currentSubTab === 'all' || postType === currentSubTab || (currentSubTab === 'screenshot' && hasImage));
+            
+            let matchMain = true;
+            if (currentMainTab === 'miactividad') {
+                matchMain = (postUser === currentUser);
+            } else if (currentMainTab === 'siguiendo') {
+                matchMain = (postUser !== currentUser);
+            } else if (currentMainTab === 'juegos') {
+                matchMain = userGames.includes(postGame);
+            } else {
+                matchMain = true;
+            }
+
+            if (matchMain && matchSub) {
+                post.style.display = 'block';
+                visibleCount++;
+                post.style.opacity = '0';
+                setTimeout(() => post.style.opacity = '1', 10);
+            } else {
+                post.style.display = 'none';
+            }
+        });
+
+        const noResults = document.getElementById('noResultsMsg');
+        if (noResults) {
+            if (visibleCount === 0 && posts.length > 0) {
+                noResults.style.display = 'flex';
+            } else {
+                noResults.style.display = 'none';
+            }
+        }
+    }
+
+    let currentStoryUserIndex = 0;
+    let currentStoryImageIndex = 0;
+    let storyUsers = [];
+    let storiesDict = {};
+    let storyTimer;
+
+    function sortStories() {
+        const wrapper = document.getElementById('storiesWrapper');
+        if(!wrapper) return;
+        
+        let viewed = JSON.parse(localStorage.getItem('gameboxViewedStories') || '{}');
+        if (Array.isArray(viewed)) {
+            viewed = {};
+            localStorage.setItem('gameboxViewedStories', '{}');
+        }
+
+        const stories = Array.from(wrapper.querySelectorAll('.story-item'));
+        
+        stories.forEach(story => {
+            const username = story.dataset.username;
+            const ring = story.querySelector('.story-ring');
+            const latestStoryId = storiesDict[username].latest_id;
+
+            if(viewed[username] && viewed[username] >= latestStoryId) {
+                ring.classList.remove('border-fuchsia-500', 'shadow-[0_0_10px_rgba(217,70,239,0.3)]');
+                ring.classList.add('border-gray-700');
+                story.dataset.viewed = '1';
+            } else {
+                ring.classList.add('border-fuchsia-500', 'shadow-[0_0_10px_rgba(217,70,239,0.3)]');
+                ring.classList.remove('border-gray-700');
+                story.dataset.viewed = '0';
+            }
+        });
+        
+        stories.sort((a, b) => a.dataset.viewed - b.dataset.viewed);
+        stories.forEach(story => wrapper.appendChild(story));
+    }
+
+    function initStories() {
+        const rawData = '{{ stories_json|safe|default:"{}" }}';
+        if(rawData) {
+            storiesDict = JSON.parse(rawData);
+        }
+        
+        const gameSelect = document.getElementById('storyGameSelect');
+        userGames.forEach(game => {
+            const opt = document.createElement('option');
+            opt.value = game;
+            opt.textContent = game;
+            gameSelect.appendChild(opt);
+        });
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('storyFileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', () => {
+            if(fileInput.files.length > 0) {
+                fileNameDisplay.textContent = "Seleccionado: " + fileInput.files[0].name;
+                fileNameDisplay.classList.remove('hidden');
+                dropZone.classList.add('border-blue-500');
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500');
+            dropZone.classList.remove('border-gray-700');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500');
+            dropZone.classList.add('border-gray-700');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileInput.files = e.dataTransfer.files;
+            if(fileInput.files.length > 0) {
+                fileNameDisplay.textContent = "Seleccionado: " + fileInput.files[0].name;
+                fileNameDisplay.classList.remove('hidden');
+                dropZone.classList.add('border-blue-500');
+                dropZone.classList.remove('border-gray-700');
+            }
+        });
+
+        sortStories();
+    }
+
+    function openStoryUpload() {
+        document.getElementById('uploadStoryModal').classList.remove('opacity-0', 'pointer-events-none');
+        document.getElementById('uploadStoryContent').classList.replace('scale-95', 'scale-100');
+    }
+
+    function closeStoryUpload() {
+        document.getElementById('uploadStoryModal').classList.add('opacity-0', 'pointer-events-none');
+        document.getElementById('uploadStoryContent').classList.replace('scale-100', 'scale-95');
+    }
+
+    function uploadStory() {
+        const fileInput = document.getElementById('storyFileInput');
+        if(!fileInput.files || fileInput.files.length === 0) {
+            alert("Por favor, selecciona o arrastra una imagen.");
+            return;
+        }
+
+        const fd = new FormData(document.getElementById('storyForm'));
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch('/upload-story/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken },
+            body: fd
+        })
+        .then(r => r.json())
+        .then(d => {
+            if(d.status === 'success') {
+                window.location.reload();
+            } else {
+                alert("Error al subir la historia.");
+            }
+        });
+    }
+
+    function markStoryViewed(username) {
+        let viewed = JSON.parse(localStorage.getItem('gameboxViewedStories') || '{}');
+        if (Array.isArray(viewed)) viewed = {};
+        
+        viewed[username] = storiesDict[username].latest_id;
+        localStorage.setItem('gameboxViewedStories', JSON.stringify(viewed));
+    }
+
+    function openStory(username) {
+        storyUsers = Object.keys(storiesDict);
+        currentStoryUserIndex = storyUsers.indexOf(username);
+        currentStoryImageIndex = 0;
+        document.getElementById('viewStoryModal').classList.remove('opacity-0', 'pointer-events-none');
+        showCurrentStory();
+    }
+
+    function closeStory() {
+        document.getElementById('viewStoryModal').classList.add('opacity-0', 'pointer-events-none');
+        clearTimeout(storyTimer);
+        document.getElementById('storyProgressContainer').innerHTML = '';
+        sortStories();
+    }
+
+    function showCurrentStory() {
+        clearTimeout(storyTimer);
+        if (currentStoryUserIndex >= storyUsers.length || currentStoryUserIndex < 0) {
+            closeStory();
+            return;
+        }
+        
+        const username = storyUsers[currentStoryUserIndex];
+        const userData = storiesDict[username];
+        
+        markStoryViewed(username);
+
+        if (currentStoryImageIndex >= userData.items.length) {
+            currentStoryUserIndex++;
+            currentStoryImageIndex = 0;
+            showCurrentStory();
+            return;
+        }
+
+        const item = userData.items[currentStoryImageIndex];
+        document.getElementById('storyImage').src = item.url;
+        document.getElementById('storyUsername').textContent = username;
+        document.getElementById('storyGameName').textContent = item.game;
+        
+        const avatar = userData.avatar;
+        const avatarEl = document.getElementById('storyAvatar');
+        if(avatar) {
+            avatarEl.innerHTML = `<img src="${avatar}" class="w-full h-full object-cover">`;
+        } else {
+            avatarEl.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-blue-600 text-white font-bold text-xs">${username.charAt(0).toUpperCase()}</div>`;
+        }
+
+        const progressContainer = document.getElementById('storyProgressContainer');
+        progressContainer.innerHTML = '';
+        for(let i=0; i<userData.items.length; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'flex-1 h-1 bg-gray-600 rounded-full overflow-hidden';
+            const inner = document.createElement('div');
+            inner.className = 'h-full bg-white w-0';
+            inner.style.transition = 'width 3s linear';
+            
+            if(i < currentStoryImageIndex) {
+                inner.style.width = '100%';
+            } else if (i === currentStoryImageIndex) {
+                setTimeout(() => { inner.style.width = '100%'; }, 50);
+            }
+            bar.appendChild(inner);
+            progressContainer.appendChild(bar);
+        }
+
+        storyTimer = setTimeout(() => {
+            nextStory();
+        }, 3000);
+    }
+
+    function nextStory() {
+        currentStoryImageIndex++;
+        showCurrentStory();
+    }
+
+    function prevStory() {
+        if (currentStoryImageIndex > 0) {
+            currentStoryImageIndex--;
+            showCurrentStory();
+        } else {
+            if (currentStoryUserIndex > 0) {
+                currentStoryUserIndex--;
+                const prevUser = storyUsers[currentStoryUserIndex];
+                currentStoryImageIndex = storiesDict[prevUser].items.length - 1;
+                showCurrentStory();
+            } else {
+                currentStoryImageIndex = 0;
+                showCurrentStory();
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', initStories);
+</script>
+{% endblock %}

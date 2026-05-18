@@ -1,0 +1,120 @@
+<style>
+    .sidebar { width: 280px; height: 100vh; position: fixed; left: 0; top: 0; background-color: #0d1117; border-right: 1px solid #1f2937; display: flex; flex-direction: column; z-index: 50; transition: width 0.3s ease; }
+    .sidebar.collapsed { width: 88px; }
+    .sidebar.collapsed .nav-text, .sidebar.collapsed .search-input, .sidebar.collapsed .user-info, .sidebar.collapsed .legal-footer { display: none; }
+    .sidebar.collapsed .header-container { flex-direction: column; padding: 2rem 0; gap: 1.5rem; justify-content: center; }
+    .sidebar.collapsed .search-box { justify-content: center; padding-left: 0; padding-right: 0; background: transparent; border-color: transparent; margin-bottom: 2rem; }
+    .sidebar.collapsed .user-card { background: transparent; border-color: transparent; padding: 0; justify-content: center; }
+    .sidebar.collapsed #toggleIcon { transform: rotate(180deg); }
+    .sidebar.collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
+</style>
+
+<nav id="sidebar" class="sidebar">
+    <div class="header-container p-8 flex items-center justify-between border-b border-gray-800">
+        <div class="flex items-center gap-4">
+            <!-- Contenedor del icono con tu imagen -->
+            <div class="w-10 h-10 bg-[#161b22] border border-gray-800 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-blue-500/10">
+                <img src="/media/icono.ico" alt="Logo" class="w-full h-full object-cover">
+            </div>
+            <h1 class="nav-text text-2xl font-black text-white italic tracking-tighter uppercase">GAMEBOX</h1>
+        </div>
+        <button onclick="toggleSidebar()" class="text-gray-500 hover:text-white shrink-0">
+            <i id="toggleIcon" class="fa-solid fa-chevron-left transition-transform duration-300"></i>
+        </button>
+    </div>
+
+    <div class="p-6 flex-1 overflow-hidden">
+        <div class="space-y-2">
+            <a href="/" class="nav-item flex items-center px-4 py-3 rounded-xl {% if request.resolver_match.url_name == 'feed' %}bg-gradient-to-r from-fuchsia-600/10 to-blue-600/10 text-fuchsia-500 border border-fuchsia-500/20{% else %}text-gray-400 hover:bg-white/5 hover:text-white{% endif %} transition-all">
+                <i class="fa-solid fa-house w-5 text-center shrink-0"></i>
+                <span class="nav-text ml-4 text-xs font-black uppercase tracking-widest">Inicio</span>
+            </a>
+
+            <a href="/search/" class="nav-item flex items-center px-4 py-3 rounded-xl {% if request.resolver_match.url_name == 'search' %}bg-gradient-to-r from-fuchsia-600/10 to-blue-600/10 text-fuchsia-500 border border-fuchsia-500/20{% else %}text-gray-400 hover:bg-white/5 hover:text-white{% endif %} transition-all">
+                <i class="fa-solid fa-magnifying-glass w-5 text-center shrink-0"></i>
+                <span class="nav-text ml-4 text-xs font-black uppercase tracking-widest">Buscar</span>
+            </a>
+
+            {% if user.is_authenticated %}
+            <a href="{% url 'profile' user.username %}" class="nav-item flex items-center px-4 py-3 rounded-xl {% if request.resolver_match.url_name == 'profile' %}bg-gradient-to-r from-fuchsia-600/10 to-blue-600/10 text-fuchsia-500 border border-fuchsia-500/20{% else %}text-gray-400 hover:bg-white/5 hover:text-white{% endif %} transition-all">
+                <i class="fa-solid fa-user w-5 text-center shrink-0"></i>
+                <span class="nav-text ml-4 text-xs font-black uppercase tracking-widest">Mi Perfil</span>
+            </a>
+
+            <a href="/collection/" class="nav-item flex items-center px-4 py-3 rounded-xl {% if request.resolver_match.url_name == 'collection' %}bg-gradient-to-r from-fuchsia-600/10 to-blue-600/10 text-fuchsia-500 border border-fuchsia-500/20{% else %}text-gray-400 hover:bg-white/5 hover:text-white{% endif %} transition-all">
+                <i class="fa-solid fa-box-archive w-5 text-center shrink-0"></i>
+                <span class="nav-text ml-4 text-xs font-black uppercase tracking-widest">Mi Colección</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-auto p-6 border-t border-gray-800">
+        
+        <div class="legal-footer mb-6 text-center space-y-2">
+            <p class="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600">
+                Powered by <a href="https://www.igdb.com/" target="_blank" class="text-blue-500 hover:text-blue-400 transition-colors">IGDB</a>
+            </p>
+            <div class="flex justify-center gap-3">
+                <a href="{% url 'terms' %}" class="text-[9px] font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest">Términos</a>
+                <span class="text-gray-800 text-[9px]">|</span>
+                <a href="{% url 'privacy' %}" class="text-[9px] font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest">Privacidad</a>
+            </div>
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="user-card flex items-center gap-4 bg-[#161b22] border border-gray-800 p-4 rounded-2xl cursor-pointer hover:border-gray-600 transition-colors group">
+            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden shrink-0 border border-gray-700">
+                {% if user.profile.avatar %}
+                    <img src="{{ user.profile.avatar.url }}" class="w-full h-full object-cover">
+                {% else %}
+                    <span class="text-white font-bold text-xs">{{ user.username|make_list|first|upper }}</span>
+                {% endif %}
+            </div>
+            <div class="user-info flex-1 overflow-hidden">
+                <p class="text-xs font-black text-white uppercase tracking-widest truncate">{{ user.username }}</p>
+                <p class="text-[9px] text-gray-500 font-bold uppercase">@{{ user.username|lower }}</p>
+            </div>
+            <form method="POST" action="/logout/" class="m-0 p-0">
+                {% csrf_token %}
+                <button type="submit" class="text-gray-600 group-hover:text-fuchsia-500 transition-colors p-1">
+                    <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <a href="/login/" class="nav-item flex items-center justify-center w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)] uppercase tracking-widest text-[10px]">
+            <i class="fa-solid fa-right-to-bracket mr-2"></i>
+            Iniciar Sesión
+        </a>
+        {% endif %}
+    </div>
+</nav>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const main = document.querySelector('.main-content');
+        sidebar.classList.toggle('collapsed');
+        if (sidebar.classList.contains('collapsed')) {
+            if(main) main.style.marginLeft = '88px';
+            localStorage.setItem('sidebarState', 'collapsed');
+        } else {
+            if(main) main.style.marginLeft = '280px';
+            localStorage.setItem('sidebarState', 'expanded');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const state = localStorage.getItem('sidebarState');
+        const sidebar = document.getElementById('sidebar');
+        const main = document.querySelector('.main-content');
+        if (main) main.style.transition = 'margin-left 0.3s ease';
+        if (state === 'collapsed') {
+            sidebar.classList.add('collapsed');
+            if (main) main.style.marginLeft = '88px';
+        } else {
+            if (main) main.style.marginLeft = '280px';
+        }
+    });
+</script>

@@ -1,0 +1,776 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profile_user.username }} - Gamebox{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --user-accent: {{ profile.accent_color|default:"#3b82f6" }};
+    }
+    .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+    .activity-box { width: 10px; height: 10px; border-radius: 2px; background-color: #1f2937; }
+    .activity-box.level-1 { background-color: #0e4429; }
+    .activity-box.level-2 { background-color: #006d32; }
+    .activity-box.level-3 { background-color: #26a641; }
+    .activity-box.level-4 { background-color: #39d353; }
+    
+    .tab-active { border-bottom-width: 2px; border-color: var(--user-accent); color: white !important; }
+    .tab-active i { color: var(--user-accent); }
+    .tab-active span { background-color: var(--user-accent) !important; color: white !important; }
+    .pill-active { background-color: var(--user-accent) !important; color: white !important; }
+</style>
+
+<div id="editProfileModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div onclick="closeEditProfile()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-3xl bg-[#0d1117] border border-gray-800 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+        <div class="flex justify-between items-center p-6 border-b border-gray-800 shrink-0">
+            <h2 class="text-xl font-bold text-white">Editar Perfil</h2>
+            <button onclick="closeEditProfile()" class="text-gray-500 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
+            <form id="editProfileForm" method="POST" enctype="multipart/form-data" class="space-y-8">
+                {% csrf_token %}
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Diseño Visual</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-white mb-2">Avatar</label>
+                            <input type="file" name="avatar" accept="image/*" class="w-full bg-[#161b22] border border-gray-800 rounded-xl p-3 text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[var(--user-accent)] file:text-white hover:file:brightness-110">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-white mb-2">Banner</label>
+                            <input type="file" name="banner" accept="image/*" class="w-full bg-[#161b22] border border-gray-800 rounded-xl p-3 text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[var(--user-accent)] file:text-white hover:file:brightness-110">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-white mb-2">Color de Énfasis</label>
+                        <div class="flex items-center gap-4 bg-[#161b22] border border-gray-800 rounded-xl p-3">
+                            <input type="color" name="accent_color" value="{{ profile.accent_color|default:'#3b82f6' }}" class="w-10 h-10 rounded cursor-pointer bg-transparent border-0 p-0">
+                            <span class="text-sm text-gray-400">Este color se usará en los detalles de tu perfil.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Información Personal</h3>
+                    <div>
+                        <label class="block text-sm font-bold text-white mb-2">Biografía</label>
+                        <textarea name="bio" rows="4" class="w-full bg-[#161b22] border border-gray-800 rounded-xl p-4 text-white focus:outline-none focus:border-[var(--user-accent)] resize-none">{{ profile.bio }}</textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="p-6 border-t border-gray-800 bg-[#0d1117] shrink-0 rounded-b-2xl">
+            <button type="button" onclick="document.getElementById('editProfileForm').submit()" class="w-full py-4 bg-[var(--user-accent)] text-white font-bold rounded-xl transition-all hover:brightness-110 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="favSearchModal" class="fixed inset-0 z-[120] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div onclick="closeFavModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-lg bg-[#0d1117] border border-gray-800 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 p-6">
+        <h3 class="text-white font-bold text-lg mb-4">Añadir a Favoritos</h3>
+        <input type="hidden" id="currentFavSlot">
+        
+        <div class="bg-[#161b22] border border-gray-800 rounded-xl flex items-center px-4 py-3 focus-within:border-[var(--user-accent)] transition-colors">
+            <i class="fa-solid fa-magnifying-glass text-gray-500"></i>
+            <input type="text" id="favSearchInput" onkeyup="searchIGDBFavs()" placeholder="Buscar un juego..." class="bg-transparent border-none text-sm text-white ml-3 w-full focus:outline-none placeholder-gray-600">
+        </div>
+        
+        <div id="favSearchResults" class="mt-4 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+            <p class="text-center text-gray-500 text-xs py-4">Empieza a escribir para buscar...</p>
+        </div>
+    </div>
+</div>
+
+<div id="editGameModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div onclick="closeEditGame()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-2xl bg-[#0d1117] border border-gray-800 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+        
+        <div class="flex justify-between items-start p-6 border-b border-gray-800 shrink-0">
+            <div class="flex gap-4">
+                <img id="editGameCoverImg" src="" class="w-16 h-20 object-cover rounded shadow">
+                <div>
+                    <h2 id="editGameTitle" class="text-xl font-bold text-white">Editar Juego</h2>
+                    <p class="text-[10px] text-[var(--user-accent)] mt-1 uppercase border border-[var(--user-accent)]/30 bg-[var(--user-accent)]/10 px-2 py-0.5 rounded inline-block">Modo Edición</p>
+                </div>
+            </div>
+            <button onclick="closeEditGame()" class="text-gray-500 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <div class="p-6 overflow-y-auto space-y-8 flex-1 custom-scrollbar">
+            <form id="editGameDataForm" class="space-y-8" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" id="editGameId" name="game_id">
+                <input type="hidden" id="editGameName" name="game_name">
+                <input type="hidden" id="editGameCover" name="cover_url">
+                
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Estado</label>
+                    <div class="grid grid-cols-5 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="playing" class="peer hidden edit-status-radio">
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-[var(--user-accent)] peer-checked:bg-[var(--user-accent)]/10 peer-checked:text-[var(--user-accent)] text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-solid fa-gamepad text-lg"></i>
+                                <span class="text-[10px] font-bold">Jugando</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="finished" class="peer hidden edit-status-radio">
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-[var(--user-accent)] peer-checked:bg-[var(--user-accent)]/10 peer-checked:text-[var(--user-accent)] text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-regular fa-flag text-lg"></i>
+                                <span class="text-[10px] font-bold">Terminado</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="completed" class="peer hidden edit-status-radio">
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-[var(--user-accent)] peer-checked:bg-[var(--user-accent)]/10 peer-checked:text-[var(--user-accent)] text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-solid fa-trophy text-lg"></i>
+                                <span class="text-[10px] font-bold">Completado</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="backlog" class="peer hidden edit-status-radio">
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-[var(--user-accent)] peer-checked:bg-[var(--user-accent)]/10 peer-checked:text-[var(--user-accent)] text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-regular fa-bookmark text-lg"></i>
+                                <span class="text-[10px] font-bold">Backlog</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="abandoned" class="peer hidden edit-status-radio">
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-red-500 peer-checked:bg-red-500/10 peer-checked:text-red-500 text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-solid fa-skull text-lg"></i>
+                                <span class="text-[10px] font-bold">Abandonado</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Valoración</label>
+                    <div class="bg-[#161b22] border border-gray-800 p-4 rounded-xl flex items-center gap-4">
+                        <div class="flex text-3xl gap-1 text-gray-700 cursor-pointer" id="edit-star-rating-container">
+                            <i class="fa-solid fa-star edit-star-btn" data-value="1"></i>
+                            <i class="fa-solid fa-star edit-star-btn" data-value="2"></i>
+                            <i class="fa-solid fa-star edit-star-btn" data-value="3"></i>
+                            <i class="fa-solid fa-star edit-star-btn" data-value="4"></i>
+                            <i class="fa-solid fa-star edit-star-btn" data-value="5"></i>
+                        </div>
+                        <span class="text-white font-bold text-lg"><span id="edit-rating-display">0</span> <span class="text-gray-500 text-sm font-normal">/ 5</span></span>
+                        <input type="hidden" name="rating" id="edit-rating-input" value="0">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Plataforma</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="platform" value="PC" class="peer hidden edit-plat-radio">
+                            <div class="bg-[#161b22] border border-gray-800 px-4 py-2 rounded-lg text-xs font-bold text-gray-400 peer-checked:bg-[var(--user-accent)] peer-checked:text-white peer-checked:border-[var(--user-accent)] transition-colors"><i class="fa-brands fa-windows mr-1"></i> PC</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="platform" value="PlayStation" class="peer hidden edit-plat-radio">
+                            <div class="bg-[#161b22] border border-gray-800 px-4 py-2 rounded-lg text-xs font-bold text-gray-400 peer-checked:bg-[var(--user-accent)] peer-checked:text-white peer-checked:border-[var(--user-accent)] transition-colors"><i class="fa-brands fa-playstation mr-1"></i> PlayStation</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="platform" value="Xbox" class="peer hidden edit-plat-radio">
+                            <div class="bg-[#161b22] border border-gray-800 px-4 py-2 rounded-lg text-xs font-bold text-gray-400 peer-checked:bg-[var(--user-accent)] peer-checked:text-white peer-checked:border-[var(--user-accent)] transition-colors"><i class="fa-brands fa-xbox mr-1"></i> Xbox</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="platform" value="Nintendo" class="peer hidden edit-plat-radio">
+                            <div class="bg-[#161b22] border border-gray-800 px-4 py-2 rounded-lg text-xs font-bold text-gray-400 peer-checked:bg-[var(--user-accent)] peer-checked:text-white peer-checked:border-[var(--user-accent)] transition-colors"><i class="fa-solid fa-gamepad mr-1"></i> Nintendo</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="platform" value="Otro" class="peer hidden edit-plat-radio">
+                            <div class="bg-[#161b22] border border-gray-800 px-4 py-2 rounded-lg text-xs font-bold text-gray-400 peer-checked:bg-[var(--user-accent)] peer-checked:text-white peer-checked:border-[var(--user-accent)] transition-colors"><i class="fa-solid fa-mobile-screen mr-1"></i> Otro</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Tiempo Jugado</label>
+                        <div class="flex gap-4">
+                            <div class="w-24">
+                                <label class="text-[10px] text-gray-500 mb-1 block">Horas</label>
+                                <input type="number" name="hours" id="editGameHours" min="0" class="w-full bg-[#161b22] border border-gray-800 rounded-lg p-3 text-white focus:outline-none focus:border-[var(--user-accent)]">
+                            </div>
+                            <div class="w-24">
+                                <label class="text-[10px] text-gray-500 mb-1 block">Minutos</label>
+                                <input type="number" name="minutes" id="editGameMinutes" min="0" max="59" class="w-full bg-[#161b22] border border-gray-800 rounded-lg p-3 text-white focus:outline-none focus:border-[var(--user-accent)]">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Screenshot</label>
+                        <input type="file" name="screenshot" accept="image/*" class="w-full bg-[#161b22] border border-gray-800 rounded-xl p-3 text-xs text-gray-400 file:bg-blue-600 file:border-0 file:rounded-lg file:text-white file:font-bold file:px-4 file:py-2 file:mr-4">
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="p-6 border-t border-gray-800 bg-[#0d1117] shrink-0 rounded-b-2xl">
+            <button type="button" onclick="saveGameEdit()" class="w-full py-4 bg-[var(--user-accent)] hover:brightness-110 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i> Actualizar Juego
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="relative w-full h-[300px] overflow-hidden rounded-b-3xl">
+    {% if profile.banner %}
+    <img src="{{ profile.banner.url }}" class="w-full h-full object-cover">
+    {% else %}
+    <div class="w-full h-full bg-gradient-to-r from-[#161b22] to-[var(--user-accent)] opacity-50"></div>
+    {% endif %}
+    <div class="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-[#0d1117]/60 to-transparent"></div>
+</div>
+
+<div class="max-w-[1400px] mx-auto px-6 relative -top-20">
+    <div class="flex flex-col md:flex-row items-end justify-between mb-8 gap-6">
+        <div class="flex items-end gap-6">
+            <div class="w-32 h-32 rounded-full border-4 border-[#0d1117] bg-[#161b22] overflow-hidden shrink-0 shadow-2xl relative">
+                {% if profile.avatar %}
+                <img src="{{ profile.avatar.url }}" class="w-full h-full object-cover">
+                {% else %}
+                <div class="w-full h-full flex items-center justify-center bg-[var(--user-accent)] text-white text-5xl font-black">
+                    {{ profile_user.username|make_list|first|upper }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="pb-2">
+                <div class="flex items-center gap-3 mb-1">
+                    <h1 class="text-3xl font-black text-white">{{ profile_user.username }}</h1>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-500">PRO</span>
+                </div>
+                <p class="text-sm text-gray-300 mb-2">{{ profile.bio|default:"Jugador de Gamebox" }}</p>
+                <div class="flex items-center gap-4 text-xs font-bold">
+                    <span class="text-white">{{ stats.total_games|default:"0" }} <span class="text-gray-500 font-normal">Juegos</span></span>
+                    
+                    <a href="{% url 'follow_list' profile_user.username 'following' %}" class="text-white hover:text-blue-500 transition-colors">
+                        {{ profile_user.following.count|default:"0" }} <span class="text-gray-500 font-normal">Siguiendo</span>
+                    </a>
+                    <a href="{% url 'follow_list' profile_user.username 'followers' %}" class="text-white hover:text-blue-500 transition-colors">
+                        <span id="follower-count">{{ profile_user.followers.count|default:"0" }}</span> <span class="text-gray-500 font-normal">Seguidores</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 pb-2">
+            {% if request.user == profile_user %}
+            <button onclick="openEditProfile()" class="px-6 py-2 bg-[#161b22] border border-gray-800 hover:border-[var(--user-accent)] text-white text-sm font-bold rounded-full transition-all">
+                Editar Perfil
+            </button>
+            {% elif request.user.is_authenticated %}
+                <button onclick="toggleFollow('{{ profile_user.username }}')" id="follow-btn" 
+                    class="px-6 py-2 text-sm font-bold rounded-full transition-all 
+                    {% if is_following %}bg-[#161b22] border border-blue-500 text-blue-500{% else %}bg-blue-600 hover:bg-blue-500 text-white{% endif %}">
+                    {% if is_following %}Siguiendo{% else %}Seguir{% endif %}
+                </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="flex items-center justify-between bg-[#161b22]/50 border-y border-gray-800/50 py-4 px-8 mb-6 overflow-x-auto custom-scrollbar">
+        <div class="flex items-center gap-3 min-w-max pr-8 border-r border-gray-800/50 text-sm">
+            <i class="fa-solid fa-gamepad text-blue-500"></i>
+            <span class="font-black text-white">{{ stats.total_games|default:"0" }}</span>
+            <span class="text-gray-500">Juegos</span>
+        </div>
+        <div class="flex items-center gap-3 min-w-max px-8 border-r border-gray-800/50 text-sm">
+            <i class="fa-regular fa-flag text-purple-500"></i>
+            <span class="font-black text-white">{{ stats.finished|default:"0" }}</span>
+            <span class="text-gray-500">Terminados</span>
+        </div>
+        <div class="flex items-center gap-3 min-w-max px-8 border-r border-gray-800/50 text-sm">
+            <i class="fa-solid fa-check text-green-500"></i>
+            <span class="font-black text-white">{{ stats.completed|default:"0" }}</span>
+            <span class="text-gray-500">Completados</span>
+        </div>
+        <div class="flex items-center gap-3 min-w-max px-8 border-r border-gray-800/50 text-sm">
+            <i class="fa-solid fa-trophy text-yellow-500"></i>
+            <span class="font-black text-white">{{ stats.achievements|default:"0" }}</span>
+            <span class="text-gray-500">Logros</span>
+        </div>
+        <div class="flex items-center gap-3 min-w-max px-8 border-r border-gray-800/50 text-sm">
+            <i class="fa-regular fa-clock text-fuchsia-500"></i>
+            <span class="font-black text-white">{{ stats.playtime|default:"0h" }}</span>
+            <span class="text-gray-500">Tiempo de juego</span>
+        </div>
+        <div class="flex items-center gap-3 min-w-max pl-8 text-sm">
+            <i class="fa-solid fa-certificate text-teal-500"></i>
+            <span class="font-black text-white">{{ stats.verified|default:"100%" }}</span>
+            <span class="text-gray-500">Verificado</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        <div class="xl:col-span-3 space-y-12">
+            
+            <section>
+                <div class="flex items-center gap-2 mb-6">
+                    <div class="w-1 h-5 bg-[var(--user-accent)] rounded-full"></div>
+                    <h2 class="text-xl font-bold text-white">Top 5 Favoritos</h2>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    {% for item in fav_list %}
+                        {% if item.game %}
+                        <a href="/game/{{ item.game.game_id }}/" class="relative aspect-[3/4] rounded-2xl overflow-hidden group border border-gray-800 hover:border-[var(--user-accent)] transition-colors shadow-lg block">
+                            <img src="{{ item.game.cover_url }}" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                {% if request.user == profile_user %}
+                                <button onclick="event.preventDefault(); event.stopPropagation(); deleteFavorite({{ item.slot }})" class="w-10 h-10 bg-red-500 hover:bg-red-600 rounded-full text-white shadow-lg transform scale-75 group-hover:scale-100 transition-all"><i class="fa-solid fa-trash"></i></button>
+                                {% endif %}
+                            </div>
+                        </a>
+                        {% else %}
+                        <button {% if request.user == profile_user %}onclick="openFavSearch({{ item.slot }})"{% endif %} class="relative aspect-[3/4] rounded-2xl border-2 border-dashed border-gray-800 hover:border-[var(--user-accent)] flex flex-col items-center justify-center text-gray-700 hover:text-[var(--user-accent)] transition-colors group">
+                            <i class="fa-solid fa-plus text-3xl mb-2 group-hover:scale-110 transition-transform"></i>
+                        </button>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-2">
+                        <div class="w-1 h-5 bg-[var(--user-accent)] rounded-full"></div>
+                        <h2 class="text-xl font-bold text-white">Juegos</h2>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-6 border-b border-gray-800/50 pb-3 mb-6 overflow-x-auto custom-scrollbar">
+                    <button onclick="filterByStatus('all', this)" class="status-tab tab-active flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-white transition-colors min-w-max pb-3 -mb-[14px]">
+                        <i class="fa-solid fa-border-all"></i> Todos <span class="bg-[#161b22] px-2 py-0.5 rounded-full text-[10px]">{{ stats.total_games|default:"0" }}</span>
+                    </button>
+                    <button onclick="filterByStatus('playing', this)" class="status-tab flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-white transition-colors min-w-max pb-3 -mb-[14px]">
+                        <i class="fa-solid fa-gamepad"></i> Jugando <span class="bg-[#161b22] px-2 py-0.5 rounded-full text-[10px]">{{ stats.playing|default:"0" }}</span>
+                    </button>
+                    <button onclick="filterByStatus('finished', this)" class="status-tab flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-white transition-colors min-w-max pb-3 -mb-[14px]">
+                        <i class="fa-regular fa-flag"></i> Terminados <span class="bg-[#161b22] px-2 py-0.5 rounded-full text-[10px]">{{ stats.finished|default:"0" }}</span>
+                    </button>
+                    <button onclick="filterByStatus('completed', this)" class="status-tab flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-white transition-colors min-w-max pb-3 -mb-[14px]">
+                        <i class="fa-solid fa-check"></i> Completados <span class="bg-[#161b22] px-2 py-0.5 rounded-full text-[10px]">{{ stats.completed|default:"0" }}</span>
+                    </button>
+                    <button onclick="filterByStatus('backlog', this)" class="status-tab flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-white transition-colors min-w-max pb-3 -mb-[14px]">
+                        <i class="fa-regular fa-bookmark"></i> Backlog <span class="bg-[#161b22] px-2 py-0.5 rounded-full text-[10px]">{{ stats.backlog|default:"0" }}</span>
+                    </button>
+                    <button onclick="filterByStatus('paused', this)" class="status-tab flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-white transition-colors min-w-max pb-3 -mb-[14px]">
+                        <i class="fa-solid fa-pause"></i> Pausado <span class="bg-[#161b22] px-2 py-0.5 rounded-full text-[10px]">{{ stats.paused|default:"0" }}</span>
+                    </button>
+                    <button onclick="filterByStatus('abandoned', this)" class="status-tab flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-white transition-colors min-w-max pb-3 -mb-[14px]">
+                        <i class="fa-solid fa-skull"></i> Abandonado <span class="bg-[#161b22] px-2 py-0.5 rounded-full text-[10px]">{{ stats.abandoned|default:"0" }}</span>
+                    </button>
+                </div>
+
+                <div class="mb-6">
+                    <div class="bg-[#161b22] border border-gray-800 rounded-xl flex items-center px-4 py-3 mb-4 focus-within:border-[var(--user-accent)] transition-colors">
+                        <i class="fa-solid fa-magnifying-glass text-gray-500 text-sm"></i>
+                        <input type="text" id="searchInput" onkeyup="searchLocalGames()" placeholder="Buscar en tus juegos..." class="bg-transparent border-none text-sm text-white ml-3 w-full focus:outline-none placeholder-gray-600">
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <button onclick="filterByPlatform('all', this)" class="plat-pill pill-active px-5 py-1.5 bg-[#161b22] border border-gray-800 text-gray-400 hover:text-white text-xs font-bold rounded-full shadow-lg transition-colors">Todos</button>
+                            <button onclick="filterByPlatform('pc', this)" class="plat-pill px-5 py-1.5 bg-[#161b22] border border-gray-800 text-gray-400 hover:text-white text-xs font-bold rounded-full flex items-center gap-2 transition-colors"><i class="fa-solid fa-desktop"></i> PC</button>
+                            <button onclick="filterByPlatform('other', this)" class="plat-pill px-5 py-1.5 bg-[#161b22] border border-gray-800 text-gray-400 hover:text-white text-xs font-bold rounded-full flex items-center gap-2 transition-colors"><i class="fa-solid fa-gamepad"></i> Otro</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4" id="gamesContainer">
+                    {% for game in user_games %}
+                    <div class="game-row bg-transparent border-b border-gray-800/50 pb-4 flex gap-4 items-center group transition-all" 
+                         data-status="{{ game.status }}" 
+                         data-platform="{% if 'pc' in game.platform|lower or 'windows' in game.platform|lower %}pc{% else %}other{% endif %}" 
+                         data-title="{{ game.game_name|lower }}">
+                        
+                        <a href="/game/{{ game.game_id }}/" class="shrink-0">
+                            <img src="{{ game.cover_url }}" class="w-14 h-20 object-cover rounded shadow-lg">
+                        </a>
+                        
+                        <div class="flex-1 flex flex-col justify-center">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="flex items-center gap-3">
+                                        <h3 class="text-white font-bold text-lg flex items-center gap-3">
+                                            <a href="/game/{{ game.game_id }}/" class="hover:text-[var(--user-accent)] transition-colors">{{ game.game_name }}</a>
+                                        </h3>
+                                        <div class="flex text-yellow-500 text-xs gap-0.5">
+                                            {% if game.rating >= 1 %}<i class="fa-solid fa-star"></i>{% else %}<i class="fa-regular fa-star"></i>{% endif %}
+                                            {% if game.rating >= 2 %}<i class="fa-solid fa-star"></i>{% else %}<i class="fa-regular fa-star"></i>{% endif %}
+                                            {% if game.rating >= 3 %}<i class="fa-solid fa-star"></i>{% else %}<i class="fa-regular fa-star"></i>{% endif %}
+                                            {% if game.rating >= 4 %}<i class="fa-solid fa-star"></i>{% else %}<i class="fa-regular fa-star"></i>{% endif %}
+                                            {% if game.rating >= 5 %}<i class="fa-solid fa-star"></i>{% else %}<i class="fa-regular fa-star"></i>{% endif %}
+                                        </div>
+                                        <span class="border border-gray-700 text-gray-400 text-[9px] px-3 py-1 rounded-full flex items-center gap-1 uppercase tracking-widest font-bold">
+                                            <i class="fa-solid fa-link"></i> {{ game.get_status_display }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                                        {% if game.platform and game.platform != 'none' %}
+                                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-desktop"></i> {{ game.platform }}</span>
+                                        <span class="w-px h-3 bg-gray-800"></span>
+                                        {% endif %}
+                                        <span class="flex items-center gap-1.5"><i class="fa-regular fa-clock"></i> {{ game.hours }}h {% if game.minutes %}{{ game.minutes }}m{% endif %}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center gap-5 text-gray-500">
+                                    <button onclick="shareGame('{{ game.game_name|escapejs }}')" title="Copiar nombre" class="hover:text-white transition-colors"><i class="fa-solid fa-share-nodes"></i></button>
+                                    {% if request.user == profile_user %}
+                                    <button onclick="openEditGame({{ game.game_id }}, '{{ game.game_name|escapejs }}', '{{ game.cover_url }}', '{{ game.status }}', {{ game.rating }}, {{ game.hours }}, {{ game.minutes }}, '{{ game.platform|escapejs }}')" title="Editar" class="hover:text-[var(--user-accent)] transition-colors"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="toggleHideRow(this)" title="Ocultar" class="hover:text-yellow-500 transition-colors"><i class="fa-solid fa-eye-slash"></i></button>
+                                    <button onclick="deleteUserGame({{ game.game_id }}, '{{ game.game_name|escapejs }}')" title="Eliminar" class="hover:text-red-500 transition-colors"><i class="fa-solid fa-trash"></i></button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if game.screenshot %}
+                            <div class="mt-4">
+                                <a href="{{ game.screenshot.url }}" target="_blank">
+                                    <img src="{{ game.screenshot.url }}" class="h-32 rounded-xl shadow-md border border-gray-800 object-cover hover:border-[var(--user-accent)] transition-colors">
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="h-32 flex items-center justify-center border border-gray-800 border-dashed rounded-2xl">
+                        <p class="text-gray-500 text-sm font-bold">Aún no hay juegos registrados.</p>
+                    </div>
+                    {% endfor %}
+                    <div id="noResultsMsg" class="hidden h-32 flex items-center justify-center border border-gray-800 border-dashed rounded-2xl">
+                        <p class="text-gray-500 text-sm font-bold">No se encontraron juegos con esos filtros.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <div class="flex items-center gap-2 mb-6">
+                    <div class="w-1 h-5 bg-yellow-500 rounded-full"></div>
+                    <h2 class="text-xl font-bold text-white uppercase italic tracking-wider">Reseñas</h2>
+                </div>
+
+                <div class="space-y-6">
+                    {% for review in user_reviews %}
+                    <div id="review-post-{{ review.id }}" class="bg-[#161b22] border border-gray-800 p-6 rounded-[2rem] transition-all hover:border-gray-700 group">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex gap-4">
+                                <img src="{{ review.game_cover }}" class="w-12 h-16 object-cover rounded-lg shadow-md border border-gray-800">
+                                <div>
+                                    <h4 class="text-white font-black uppercase text-sm italic tracking-tight">{{ review.game_title }}</h4>
+                                    <div class="flex text-yellow-500 text-[10px] gap-0.5 mt-1">
+                                        {% for i in "12345" %}
+                                            <i class="{% if forloop.counter <= review.rating %}fa-solid{% else %}fa-regular text-gray-800{% endif %} fa-star"></i>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if request.user == profile_user %}
+                            <button onclick="deleteReview({{ review.id }})" class="text-gray-600 hover:text-red-500 transition-colors p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        <p class="text-gray-400 text-sm leading-relaxed whitespace-pre-wrap italic">"{{ review.content }}"</p>
+                        
+                        {% if review.screenshot %}
+                        <div class="mt-4">
+                            <a href="{{ review.screenshot.url }}" target="_blank">
+                                <img src="{{ review.screenshot.url }}" class="h-32 rounded-xl shadow-md border border-gray-800 object-cover hover:border-[var(--user-accent)] transition-colors">
+                            </a>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mt-4 pt-4 border-t border-gray-800/50 flex justify-between items-center">
+                            <span class="text-[9px] font-black text-gray-600 uppercase tracking-widest">{{ review.created_at|timesince }} ago</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="py-16 text-center bg-[#161b22]/30 border border-gray-800 border-dashed rounded-[2rem]">
+                        <p class="text-gray-500 font-black uppercase tracking-widest text-[10px]">Aún no hay reseñas publicadas.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+        </div>
+
+        <div class="xl:col-span-1 space-y-6">
+            <div class="bg-[#161b22] border border-gray-800 rounded-2xl p-6 text-center">
+                <div class="flex items-center justify-center gap-2 text-white font-bold mb-4">
+                    <i class="fa-regular fa-calendar text-[var(--user-accent)]"></i> {{ current_year }}
+                </div>
+                <div class="flex justify-center items-center gap-4 text-sm font-bold text-white mb-2">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-gamepad text-gray-500 text-xs"></i> {{ stats.total_games|default:"0" }}</span>
+                    <span class="flex items-center gap-1"><i class="fa-regular fa-flag text-purple-500 text-xs"></i> {{ stats.finished|default:"0" }}</span>
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-check text-green-500 text-xs"></i> {{ stats.completed|default:"0" }}</span>
+                </div>
+            </div>
+
+            <div class="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
+                <div class="flex justify-between items-end mb-4">
+                    <h3 class="font-bold text-white text-sm">Mapa de Actividad</h3>
+                    <span class="text-[10px] text-gray-500">Últimos 90 días</span>
+                </div>
+                <div class="grid grid-cols-[auto_1fr] gap-2">
+                    <div class="flex flex-col gap-[6px] text-[8px] text-gray-500 pt-1">
+                        <span>L</span><span>X</span><span>V</span>
+                    </div>
+                    <div class="grid grid-cols-12 gap-1.5">
+                        <script>
+                            for(let i=0; i<84; i++) {
+                                let level = Math.floor(Math.random() * 2);
+                                document.write(`<div class="activity-box ${level > 0 ? 'level-'+level : ''}"></div>`);
+                            }
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function setupEditStars() {
+        const container = document.getElementById('edit-star-rating-container');
+        if(!container) return;
+        const stars = container.querySelectorAll('i');
+        const input = document.getElementById('edit-rating-input');
+        const display = document.getElementById('edit-rating-display');
+        let currentVal = parseInt(input.value) || 0;
+
+        function updateUI(val) {
+            stars.forEach((s, idx) => {
+                if (idx < val) {
+                    s.classList.add('text-yellow-500');
+                } else {
+                    s.classList.remove('text-yellow-500');
+                }
+            });
+            if(display) display.textContent = val;
+        }
+
+        stars.forEach(star => {
+            star.addEventListener('mouseover', function() { updateUI(this.dataset.value); });
+            star.addEventListener('mouseout', function() { updateUI(currentVal); });
+            star.addEventListener('click', function() {
+                currentVal = this.dataset.value;
+                input.value = currentVal;
+                updateUI(currentVal);
+            });
+        });
+        updateUI(currentVal);
+    }
+    setupEditStars();
+
+    function openEditProfile() {
+        document.getElementById('editProfileModal').classList.remove('opacity-0', 'pointer-events-none');
+    }
+    function closeEditProfile() {
+        document.getElementById('editProfileModal').classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function openFavSearch(slot) {
+        document.getElementById('currentFavSlot').value = slot;
+        document.getElementById('favSearchResults').innerHTML = '<p class="text-center text-gray-500 text-xs py-4">Empieza a escribir para buscar...</p>';
+        document.getElementById('favSearchInput').value = '';
+        document.getElementById('favSearchModal').classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeFavModal() {
+        document.getElementById('favSearchModal').classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function searchIGDBFavs() {
+        const query = document.getElementById('favSearchInput').value;
+        const container = document.getElementById('favSearchResults');
+        if(query.length < 3) return;
+
+        container.innerHTML = '<p class="text-center text-[var(--user-accent)] text-xs py-4"><i class="fa-solid fa-circle-notch fa-spin"></i> Buscando...</p>';
+        
+        fetch(`/search-fav/?q=${query}`)
+        .then(r => r.json())
+        .then(data => {
+            container.innerHTML = '';
+            if(data.results.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 text-xs py-4">No se encontraron resultados.</p>';
+            } else {
+                data.results.forEach(game => {
+                    const div = document.createElement('div');
+                    div.className = "flex items-center gap-3 p-2 hover:bg-gray-800 rounded-lg cursor-pointer transition-colors";
+                    const cover = game.cover_url ? game.cover_url : 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.png';
+                    div.innerHTML = `
+                        <img src="${cover}" class="w-10 h-14 object-cover rounded">
+                        <span class="text-white font-bold text-sm flex-1">${game.name}</span>
+                        <i class="fa-solid fa-plus text-gray-500"></i>
+                    `;
+                    div.onclick = () => saveFavorite(game.id, game.name, cover);
+                    container.appendChild(div);
+                });
+            }
+        });
+    }
+
+    function saveFavorite(gameId, gameName, coverUrl) {
+        const slot = document.getElementById('currentFavSlot').value;
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const fd = new FormData();
+        fd.append('slot', slot);
+        fd.append('game_id', gameId);
+        fd.append('game_name', gameName);
+        fd.append('cover_url', coverUrl);
+
+        fetch('/save-fav/', { method: 'POST', headers: {'X-CSRFToken': csrf}, body: fd })
+        .then(r => r.json())
+        .then(d => { if(d.status === 'success') window.location.reload(); });
+    }
+
+    function deleteFavorite(slot) {
+        if(!confirm("¿Quitar este juego de tus favoritos?")) return;
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        fetch(`/remove-fav/${slot}/`, { method: 'POST', headers: {'X-CSRFToken': csrf} })
+        .then(r => r.json())
+        .then(d => { if(d.status === 'success') window.location.reload(); });
+    }
+
+    function openEditGame(gameId, name, cover, status, rating, hours, minutes, platform) {
+        document.getElementById('editGameId').value = gameId;
+        document.getElementById('editGameName').value = name;
+        document.getElementById('editGameCover').value = cover;
+        document.getElementById('editGameTitle').innerText = "Editar " + name;
+        document.getElementById('editGameCoverImg').src = cover;
+        
+        document.querySelectorAll('.edit-status-radio').forEach(r => {
+            r.checked = (r.value === status);
+        });
+
+        document.getElementById('edit-rating-input').value = rating;
+        const display = document.getElementById('edit-rating-display');
+        if(display) display.textContent = rating;
+        const stars = document.getElementById('edit-star-rating-container').querySelectorAll('i');
+        stars.forEach((s, idx) => {
+            if (idx < rating) s.classList.add('text-yellow-500');
+            else s.classList.remove('text-yellow-500');
+        });
+
+        document.querySelectorAll('.edit-plat-radio').forEach(r => {
+            if(platform && (platform.toLowerCase() === r.value.toLowerCase() || platform.includes(r.value))) {
+                r.checked = true;
+            } else {
+                r.checked = false;
+            }
+        });
+
+        document.getElementById('editGameHours').value = hours;
+        document.getElementById('editGameMinutes').value = minutes;
+        
+        document.getElementById('editGameModal').classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeEditGame() {
+        document.getElementById('editGameModal').classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function saveGameEdit() {
+        const gameId = document.getElementById('editGameId').value;
+        const form = document.getElementById('editGameDataForm');
+        const fd = new FormData(form);
+        const csrfToken = fd.get('csrfmiddlewaretoken');
+
+        fetch(`/add-backlog/${gameId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken },
+            body: fd
+        })
+        .then(r => r.json())
+        .then(d => {
+            if(d.status === 'success') window.location.reload();
+            else alert("Error al guardar.");
+        });
+    }
+
+    function deleteUserGame(gameId, gameName) {
+        if(confirm(`¿Eliminar "${gameName}" de tu perfil? Esto borrará las horas jugadas.`)) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            fetch(`/delete-game/${gameId}/`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } })
+            .then(r => r.json())
+            .then(d => { if(d.status === 'success') window.location.reload(); });
+        }
+    }
+
+    function shareGame(gameName) {
+        navigator.clipboard.writeText(`¡Tengo ${gameName} en mi colección de Gamebox!`);
+        alert("¡Texto copiado!");
+    }
+
+    function toggleHideRow(btn) {
+        const row = btn.closest('.game-row');
+        row.style.opacity = row.style.opacity === '0.3' ? '1' : '0.3';
+        btn.innerHTML = row.style.opacity === '0.3' ? '<i class="fa-solid fa-eye"></i>' : '<i class="fa-solid fa-eye-slash"></i>';
+    }
+
+    function toggleFollow(username) {
+        fetch(`/toggle-follow/${username}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                const btn = document.getElementById('follow-btn');
+                if(data.action === 'followed') {
+                    btn.innerText = 'Siguiendo';
+                    btn.className = 'px-6 py-2 text-sm font-bold rounded-full transition-all bg-[#161b22] border border-blue-500 text-blue-500';
+                } else {
+                    btn.innerText = 'Seguir';
+                    btn.className = 'px-6 py-2 text-sm font-bold rounded-full transition-all bg-blue-600 hover:bg-blue-500 text-white';
+                }
+                const count = document.getElementById('follower-count');
+                if(count) count.innerText = data.count;
+            }
+        });
+    }
+
+    function deleteReview(postId) {
+        if(!confirm("¿Eliminar reseña de forma permanente?")) return;
+        fetch(`/delete-review/${postId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                const el = document.getElementById(`review-post-${postId}`);
+                el.style.opacity = '0';
+                el.style.transform = 'scale(0.95)';
+                setTimeout(() => el.remove(), 300);
+            }
+        });
+    }
+
+    let currentStatus = 'all', currentPlatform = 'all';
+    function runFilters() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        let count = 0;
+        document.querySelectorAll('.game-row').forEach(row => {
+            const matchStatus = (currentStatus === 'all' || row.dataset.status === currentStatus);
+            const matchPlatform = (currentPlatform === 'all' || row.dataset.platform === currentPlatform);
+            const matchSearch = row.dataset.title.includes(q);
+            if (matchStatus && matchPlatform && matchSearch) { row.style.display = 'flex'; count++; } 
+            else { row.style.display = 'none'; }
+        });
+        document.getElementById('noResultsMsg').classList.toggle('hidden', count > 0 || document.querySelectorAll('.game-row').length === 0);
+    }
+    function filterByStatus(s, btn) { currentStatus = s; document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('tab-active')); btn.classList.add('tab-active'); runFilters(); }
+    function filterByPlatform(p, btn) { currentPlatform = p; document.querySelectorAll('.plat-pill').forEach(t => { t.classList.remove('pill-active', 'bg-[var(--user-accent)]', 'text-white'); t.classList.add('bg-[#161b22]'); }); btn.classList.remove('bg-[#161b22]'); btn.classList.add('pill-active'); runFilters(); }
+    function searchLocalGames() { runFilters(); }
+</script>
+{% endblock %}

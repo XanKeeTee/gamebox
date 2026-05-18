@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-20">
+    <div class="bg-[#161b22] border border-gray-800 rounded-[2.5rem] p-12 shadow-2xl">
+        <header class="text-center mb-16">
+            <h1 class="text-5xl font-black text-white italic tracking-tighter uppercase mb-4">
+                GAME<span class="text-blue-500">BOX</span>
+            </h1>
+            <div class="h-1 w-20 bg-gradient-to-r from-fuchsia-600 to-blue-600 mx-auto rounded-full"></div>
+        </header>
+
+        <div class="prose prose-invert max-w-none">
+            {% block legal_content %}{% endblock %}
+        </div>
+
+        <div class="mt-16 pt-8 border-t border-gray-800 text-center">
+            <p class="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em]">Gamebox Project &bull; Powered by IGDB</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

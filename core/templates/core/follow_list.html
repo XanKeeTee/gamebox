@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-8 py-12">
+    <div class="flex items-center gap-4 mb-10">
+        <div class="w-12 h-12 bg-[#161b22] border border-gray-800 rounded-2xl flex items-center justify-center">
+            <img src="{{ MEDIA_URL }}icono.png" class="w-7 h-7 object-contain">
+        </div>
+        <div>
+            <h1 class="text-3xl font-black text-white italic uppercase tracking-tighter">{{ title }}</h1>
+            <p class="text-gray-500 text-xs font-bold uppercase tracking-widest">Perfil de {{ profile_user.username }}</p>
+        </div>
+    </div>
+
+    <div class="space-y-3">
+        {% for u in users_list %}
+        <a href="{% url 'profile' u.username %}" class="flex items-center gap-4 bg-[#161b22] border border-gray-800 hover:border-blue-500 p-4 rounded-2xl transition-all group">
+            <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-800 bg-[#0d1117] shrink-0">
+                {% if u.profile.avatar %}
+                    <img src="{{ u.profile.avatar.url }}" class="w-full h-full object-cover">
+                {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-white font-black text-sm bg-blue-600">{{ u.username|first|upper }}</div>
+                {% endif %}
+            </div>
+            <div class="flex-1">
+                <p class="text-white font-black uppercase tracking-wider text-sm">{{ u.username }}</p>
+                <p class="text-[10px] text-gray-500 font-bold uppercase">@{{ u.username|lower }}</p>
+            </div>
+            <i class="fa-solid fa-chevron-right text-gray-700 group-hover:text-blue-500 transition-colors"></i>
+        </a>
+        {% empty %}
+        <div class="text-center py-20 bg-[#161b22] border border-gray-800 border-dashed rounded-3xl">
+            <p class="text-gray-500 font-bold uppercase tracking-widest text-xs">No hay nadie en esta lista todavía</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function toggleFollow(username) {
+    fetch(`/toggle-follow/${username}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            const btn = document.getElementById('follow-btn');
+            if(data.action === 'followed') {
+                btn.innerText = 'Siguiendo';
+                btn.className = 'px-6 py-2 bg-[#161b22] border border-blue-500 text-blue-500 text-sm font-bold rounded-full transition-all';
+            } else {
+                btn.innerText = 'Seguir';
+                btn.className = 'px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-full transition-all';
+            }
+            const count = document.getElementById('follower-count');
+            if(count) count.innerText = data.count;
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gamebox{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/x-icon" href="/media/icono.ico">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #374151; }
+        
+        .nav-transition { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .nav-closed { margin-left: -256px; opacity: 0; pointer-events: none; }
+        
+        .content-wrapper {
+            width: 100%;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+            transition: all 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-[#0a0a0c] text-gray-300 font-sans antialiased flex h-screen overflow-hidden">
+
+    {% include 'includes/navbar.html' %}
+
+    <button id="openNavBtn" onclick="toggleNav()" class="fixed top-6 left-6 z-[60] w-12 h-12 bg-[#0d1117] border border-gray-800 rounded-2xl text-cyan-400 shadow-[0_0_20px_rgba(0,0,0,0.5)] hidden hover:text-fuchsia-500 hover:border-fuchsia-500/50 transition-all duration-300 group">
+        <i class="fa-solid fa-bars-staggered group-hover:scale-110"></i>
+    </button>
+
+    <main id="mainContent" class="flex-1 flex flex-col h-screen overflow-hidden relative bg-[#0a0a0c]">
+        {% if messages %}
+        <div class="fixed top-5 right-5 z-[100] space-y-3">
+            {% for message in messages %}
+            <div class="bg-[#10141d] border-l-4 border-fuchsia-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-pulse">
+                <i class="fa-solid fa-terminal text-fuchsia-400"></i>
+                <span class="text-sm font-bold tracking-tight">{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="flex-1 overflow-y-auto scroll-smooth">
+            <div id="wrapper" class="content-wrapper p-4 md:p-10">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function toggleNav() {
+            const nav = document.getElementById('sidebarNav');
+            const openBtn = document.getElementById('openNavBtn');
+            const wrapper = document.getElementById('wrapper');
+            
+            const isClosed = nav.classList.toggle('nav-closed');
+            
+            if (isClosed) {
+                openBtn.classList.remove('hidden');
+                wrapper.style.maxWidth = "1200px";
+            } else {
+                openBtn.classList.add('hidden');
+                wrapper.style.maxWidth = "1400px";
+            }
+        }
+    </script>
+</body>
+</html>

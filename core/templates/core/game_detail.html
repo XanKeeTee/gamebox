@@ -1,0 +1,587 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ game.name }} - Gamebox{% endblock %}
+
+{% block content %}
+<div id="addModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div onclick="closeAddModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-2xl bg-[#0d1117] border border-gray-800 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+        
+        <div class="flex justify-between items-start p-6 border-b border-gray-800 shrink-0">
+            <div class="flex gap-4">
+                <img src="{{ game.cover.url }}" class="w-16 h-20 object-cover rounded shadow">
+                <div>
+                    <h2 class="text-xl font-bold text-white">{{ game.name }}</h2>
+                    <p class="text-xs text-gray-400 mt-1">{{ game.developers }} · {{ game.formatted_date|slice:"-4:" }}</p>
+                    <p class="text-[10px] text-gray-500 mt-1 uppercase">
+                        {% for platform in game.platforms|slice:":3" %}{{ platform.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </p>
+                </div>
+            </div>
+            <button onclick="closeAddModal()" class="text-gray-500 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <div class="p-6 overflow-y-auto space-y-8 flex-1 custom-scrollbar">
+            <form id="addGameForm" class="space-y-8" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="game_name" value="{{ game.name }}">
+                <input type="hidden" name="cover_url" value="{{ game.cover.url }}">
+                
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Estado</label>
+                    <div class="grid grid-cols-5 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="playing" class="peer hidden" checked>
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-500 text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-solid fa-gamepad text-lg"></i>
+                                <span class="text-[10px] font-bold">Jugando</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="finished" class="peer hidden">
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-500 text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-regular fa-flag text-lg"></i>
+                                <span class="text-[10px] font-bold">Terminado</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="completed" class="peer hidden">
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-500 text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-solid fa-trophy text-lg"></i>
+                                <span class="text-[10px] font-bold">Completado</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="backlog" class="peer hidden">
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-500 text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-regular fa-bookmark text-lg"></i>
+                                <span class="text-[10px] font-bold">Backlog</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="status" value="abandoned" class="peer hidden">
+                            <div class="bg-[#161b22] border border-gray-800 py-3 rounded-xl flex flex-col items-center gap-2 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-500 text-gray-500 transition-all hover:bg-gray-800">
+                                <i class="fa-solid fa-skull text-lg"></i>
+                                <span class="text-[10px] font-bold">Abandonado</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Valoración</label>
+                    <div class="bg-[#161b22] border border-gray-800 p-4 rounded-xl flex items-center gap-4">
+                        <div class="flex text-3xl gap-1 text-gray-700 cursor-pointer" id="star-rating-container">
+                            <i class="fa-solid fa-star star-btn" data-value="1"></i>
+                            <i class="fa-solid fa-star star-btn" data-value="2"></i>
+                            <i class="fa-solid fa-star star-btn" data-value="3"></i>
+                            <i class="fa-solid fa-star star-btn" data-value="4"></i>
+                            <i class="fa-solid fa-star star-btn" data-value="5"></i>
+                        </div>
+                        <span class="text-white font-bold text-lg"><span id="rating-display">0</span> <span class="text-gray-500 text-sm font-normal">/ 5</span></span>
+                        <input type="hidden" name="rating" id="rating-input" value="0">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Plataforma</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="platform" value="none" class="peer hidden" checked>
+                            <div class="bg-[#161b22] border border-gray-800 px-4 py-2 rounded-lg text-xs font-bold text-gray-400 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 transition-colors">
+                                Sin especificar
+                            </div>
+                        </label>
+                        {% for platform in game.platforms %}
+                        <label class="cursor-pointer">
+                            <input type="radio" name="platform" value="{{ platform.id }}" class="peer hidden">
+                            <div class="bg-[#161b22] border border-gray-800 px-4 py-2 rounded-lg text-xs font-bold text-gray-400 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 transition-colors">
+                                {{ platform.name }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Tiempo Jugado</label>
+                    <div class="flex gap-4">
+                        <div class="w-24">
+                            <label class="text-[10px] text-gray-500 mb-1 block">Horas</label>
+                            <input type="number" name="hours" min="0" class="w-full bg-[#161b22] border border-gray-800 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div class="w-24">
+                            <label class="text-[10px] text-gray-500 mb-1 block">Minutos</label>
+                            <input type="number" name="minutes" min="0" max="59" class="w-full bg-[#161b22] border border-gray-800 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Captura de Pantalla</label>
+                    <input type="file" name="screenshot" id="screenshotInput" accept="image/*" class="w-full bg-[#161b22] border border-gray-800 rounded-xl p-3 text-xs text-gray-400 file:bg-blue-600 file:border-0 file:rounded-lg file:text-white file:font-bold file:px-4 file:py-2 file:mr-4">
+                </div>
+
+                <div class="border border-gray-800 rounded-xl overflow-hidden hover:border-gray-600 transition-colors">
+                    <button type="button" onclick="openReviewModal()" class="w-full bg-[#161b22] p-4 flex items-center justify-between group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                <i class="fa-solid fa-pen"></i>
+                            </div>
+                            <div class="text-left">
+                                <p class="text-white font-bold text-sm">Escribir una Reseña</p>
+                                <p class="text-gray-500 text-xs">Comparte tu opinión sobre este juego</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-gray-600"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="p-6 border-t border-gray-800 bg-[#0d1117] shrink-0 rounded-b-2xl">
+            <button type="button" onclick="confirmAdd({{ game.id }})" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check"></i> Guardar
+            </button>
+            <p class="text-center text-gray-600 text-[10px] mt-3">Puedes editar los detalles más adelante</p>
+        </div>
+    </div>
+</div>
+
+<div id="reviewModal" class="fixed inset-0 z-[110] bg-[#0d1117] flex opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="w-full max-w-6xl mx-auto flex flex-col h-screen">
+        
+        <div class="p-6 border-b border-gray-800 flex items-center gap-4 shrink-0">
+            <button onclick="closeReviewModal()" class="text-gray-500 hover:text-white"><i class="fa-solid fa-arrow-left text-xl"></i></button>
+            <img src="{{ game.cover.url }}" class="w-8 h-10 object-cover rounded">
+            <h2 class="text-xl font-bold text-white">{{ game.name }}</h2>
+        </div>
+
+        <div class="flex-1 flex overflow-hidden">
+            <div class="flex-1 border-r border-gray-800 p-8 overflow-y-auto custom-scrollbar flex flex-col gap-6">
+                <h3 class="text-2xl font-bold text-white">Escribir una Reseña</h3>
+                
+                <div>
+                    <label class="text-sm font-bold text-white block mb-2">Título</label>
+                    <input type="text" id="reviewTitle" placeholder="Resume tu reseña en una frase..." class="w-full bg-[#161b22] border border-gray-800 rounded-xl p-4 text-white focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="text-sm font-bold text-white block mb-2">Valoración</label>
+                    <div class="flex text-3xl gap-1 text-gray-700 cursor-pointer" id="review-star-container">
+                        <i class="fa-solid fa-star rev-star-btn" data-value="1"></i>
+                        <i class="fa-solid fa-star rev-star-btn" data-value="2"></i>
+                        <i class="fa-solid fa-star rev-star-btn" data-value="3"></i>
+                        <i class="fa-solid fa-star rev-star-btn" data-value="4"></i>
+                        <i class="fa-solid fa-star rev-star-btn" data-value="5"></i>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col">
+                    <label class="text-sm font-bold text-white block mb-2">Reseña <span class="text-red-500">*</span></label>
+                    <textarea id="reviewText" placeholder="Comparte tu opinión sobre este juego..." class="w-full flex-1 bg-[#161b22] border border-gray-800 rounded-xl p-4 text-white focus:outline-none focus:border-blue-500 resize-none min-h-[300px]"></textarea>
+                    <div class="text-right text-xs text-gray-600 mt-2"><span id="charCount">0</span>/10000</div>
+                </div>
+
+                <div class="bg-[#161b22] border border-gray-800 rounded-xl p-4 flex items-start gap-4">
+                    <i class="fa-solid fa-trophy text-yellow-500 mt-1"></i>
+                    <div>
+                        <p class="text-xs text-gray-400">Las reseñas con más de 280 caracteres se envían para ser aprobadas. ¡Escribe una reseña detallada para participar en los rankings de la comunidad!</p>
+                        <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                            <input type="checkbox" class="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-0">
+                            <span class="text-xs text-white">No incluir esta reseña en los rankings</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-[400px] bg-[#0d1117] p-8 overflow-y-auto custom-scrollbar">
+                <h3 class="text-sm font-bold text-white mb-6">Vista Previa</h3>
+                <div class="bg-[#161b22] border border-gray-800 rounded-xl p-6">
+                    <div class="flex gap-4 mb-4">
+                        <div class="w-10 h-10 bg-gray-700 rounded-full flex-shrink-0"></div>
+                        <div>
+                            <p class="text-sm font-bold text-white">Nombre de usuario</p>
+                            <p class="text-xs text-gray-500">Ahora mismo</p>
+                        </div>
+                    </div>
+                    <div class="flex text-yellow-500 text-xs gap-0.5 mb-3" id="previewStars">
+                        <i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i>
+                    </div>
+                    <h4 class="text-white font-bold text-lg mb-2" id="previewTitleDisplay"></h4>
+                    <p class="text-gray-400 text-sm whitespace-pre-wrap" id="previewTextDisplay">Aún no hay nada que mostrar...</p>
+                    <img id="previewScreenshot" src="" class="hidden mt-4 h-32 w-full rounded-xl shadow-md border border-gray-800 object-cover">
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-gray-800 bg-[#0d1117] flex justify-between items-center shrink-0">
+            <span class="text-xs text-gray-500">Borrador guardado</span>
+            <div class="flex gap-4">
+                <button onclick="closeReviewModal()" class="px-6 py-3 text-gray-400 hover:text-white font-bold transition-colors">Cancelar</button>
+                <button type="button" onclick="confirmAdd({{ game.id }}, true)" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors">Publicar</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="max-w-[1100px] mx-auto pb-16 pt-8 px-4">
+    
+    <div class="flex flex-col md:flex-row gap-8 mb-12">
+        <div class="w-full md:w-[280px] shrink-0">
+            <div class="rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
+                <img src="{{ game.cover.url }}" class="w-full aspect-[3/4] object-cover">
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col justify-center">
+            <h1 class="text-5xl font-bold text-white mb-2">{{ game.name }}</h1>
+            <p class="text-gray-400 text-sm mb-4">Desarrollado por <span class="text-white">{{ game.developers }}</span></p>
+            
+            <div class="flex items-center gap-3 mb-6">
+                <span class="text-xs text-gray-500">Lanzamiento: <span class="text-white font-medium">{{ game.formatted_date }}</span></span>
+            </div>
+
+            <p class="text-gray-400 leading-relaxed text-sm mb-8 line-clamp-4">
+                {{ game.summary|default:"Sin descripción disponible." }}
+            </p>
+
+            <div class="grid grid-cols-3 gap-3">
+                <button onclick="openAddModal()" class="py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-gamepad"></i> Añadir
+                </button>
+                <button class="py-3 bg-[#161b22] hover:bg-gray-800 text-blue-500 font-bold rounded-xl border border-gray-800 transition-colors flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-regular fa-bookmark"></i> Backlog
+                </button>
+                <button class="py-3 bg-[#161b22] hover:bg-gray-800 text-pink-500 font-bold rounded-xl border border-gray-800 transition-colors flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-regular fa-heart"></i> Deseados
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% if game.videos %}
+    <div class="mb-12">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <i class="fa-regular fa-circle-play text-red-500"></i> Vídeos
+        </h3>
+        <div class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
+            {% for video in game.videos %}
+            <a href="{{ video.youtube_url }}" target="_blank" class="relative w-[400px] aspect-video shrink-0 rounded-xl overflow-hidden group cursor-pointer border border-gray-800 snap-start block">
+                <img src="https://img.youtube.com/vi/{{ video.video_id }}/maxresdefault.jpg" onerror="this.src='https://img.youtube.com/vi/{{ video.video_id }}/hqdefault.jpg'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100">
+                <div class="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-colors"></div>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center text-white shadow-lg transform group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-play ml-1 text-2xl"></i>
+                    </div>
+                </div>
+                <div class="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/90 to-transparent">
+                    <p class="text-white text-sm font-bold text-center truncate">{{ video.name }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if game_screenshots %}
+    <div class="mb-12">
+        <div class="flex items-center gap-2 mb-6">
+            <i class="fa-solid fa-camera text-blue-500 text-xl"></i>
+            <h3 class="text-lg font-bold text-white">Community Screenshots <span class="text-gray-500 text-sm">({{ game_screenshots|length }})</span></h3>
+        </div>
+        <div class="flex gap-4 overflow-x-auto pb-6 custom-scrollbar snap-x">
+            {% for shot in game_screenshots %}
+            <div class="relative w-[300px] aspect-video shrink-0 rounded-2xl overflow-hidden group border border-gray-800 snap-start">
+                <img src="{{ shot.screenshot.url }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80"></div>
+                <div class="absolute bottom-0 inset-x-0 p-4 flex justify-between items-end">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full overflow-hidden border border-gray-600">
+                            {% if shot.user.profile.avatar %}
+                            <img src="{{ shot.user.profile.avatar.url }}" class="w-full h-full object-cover">
+                            {% else %}
+                            <div class="w-full h-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold">{{ shot.user.username|make_list|first|upper }}</div>
+                            {% endif %}
+                        </div>
+                        <span class="text-white text-xs font-bold">{{ shot.user.username }}</span>
+                    </div>
+                    <div class="text-white text-xs flex items-center gap-1">
+                        <i class="fa-regular fa-heart"></i> 0
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-2">
+            <a href="#" class="text-blue-500 hover:text-blue-400 text-sm font-bold transition-colors">See all</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-[#161b22] border border-gray-800 rounded-2xl p-8">
+            <h3 class="text-lg font-bold text-white mb-6">Reseñas</h3>
+            
+            <div class="flex flex-col md:flex-row gap-10 items-end mb-8">
+                <div class="text-center shrink-0">
+                    <p class="text-6xl font-black text-white leading-none">{{ game.total_rating|default:"0"|floatformat:1|default:"0.0" }}</p>
+                    <div class="flex text-yellow-500 justify-center my-2 text-sm gap-0.5">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                    </div>
+                    <p class="text-xs text-gray-500">Nota Global</p>
+                </div>
+                
+                <div class="flex-1 flex items-end gap-1 h-24">
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[5%] hover:bg-blue-400 transition-colors relative group"></div>
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[8%] hover:bg-blue-400 transition-colors relative group"></div>
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[12%] hover:bg-blue-400 transition-colors relative group"></div>
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[18%] hover:bg-blue-400 transition-colors relative group"></div>
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[25%] hover:bg-blue-400 transition-colors relative group"></div>
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[40%] hover:bg-blue-400 transition-colors relative group"></div>
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[60%] hover:bg-blue-400 transition-colors relative group"></div>
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[80%] hover:bg-blue-400 transition-colors relative group"></div>
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[95%] hover:bg-blue-400 transition-colors relative group"></div>
+                    <div class="flex-1 bg-blue-500 rounded-t-sm h-[100%] hover:bg-blue-400 transition-colors relative group"></div>
+                </div>
+            </div>
+            <div class="flex justify-between text-xs text-yellow-500 font-bold px-[120px] mb-8">
+                <span>1★</span><span>5★</span>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                <div class="bg-[#0d1117] border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-3">
+                    <i class="fa-brands fa-steam text-white text-lg"></i>
+                    <div class="flex text-yellow-500 text-[10px] gap-0.5"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i></div>
+                </div>
+                <div class="bg-[#0d1117] border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-3">
+                    <i class="fa-brands fa-playstation text-blue-500 text-lg"></i>
+                    <div class="flex text-yellow-500 text-[10px] gap-0.5"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i></div>
+                </div>
+                <div class="bg-[#0d1117] border border-gray-800 rounded-lg px-4 py-2 flex items-center gap-3">
+                    <i class="fa-brands fa-xbox text-green-500 text-lg"></i>
+                    <div class="flex text-yellow-500 text-[10px] gap-0.5"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-[#161b22] border border-gray-800 rounded-2xl p-8">
+            <h3 class="text-lg font-bold text-white mb-6">Duración Estimada</h3>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-4">
+                    <div class="flex items-center gap-3 text-gray-400">
+                        <i class="fa-regular fa-clock"></i>
+                        <span class="text-sm">Historia Principal</span>
+                    </div>
+                    <span class="text-white font-bold">{{ game.hltb.main_story|default:"--" }}</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-gray-800 pb-4">
+                    <div class="flex items-center gap-3 text-gray-400">
+                        <i class="fa-solid fa-bullseye"></i>
+                        <span class="text-sm">Historia + Extras</span>
+                    </div>
+                    <span class="text-white font-bold">{{ game.hltb.main_extra|default:"--" }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-3 text-gray-400">
+                        <i class="fa-solid fa-trophy"></i>
+                        <span class="text-sm">Completista</span>
+                    </div>
+                    <span class="text-white font-bold">{{ game.hltb.completionist|default:"--" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if game_reviews %}
+    <div class="mt-12 space-y-6">
+        <h3 class="text-lg font-bold text-white mb-6 uppercase italic tracking-wider">Reseñas de Usuarios</h3>
+        {% for review in game_reviews %}
+        <div class="bg-[#161b22] border border-gray-800 p-6 rounded-[2rem] transition-all hover:border-gray-700">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full overflow-hidden border border-gray-700">
+                        {% if review.user.profile.avatar %}
+                        <img src="{{ review.user.profile.avatar.url }}" class="w-full h-full object-cover">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center text-white font-bold text-xs bg-blue-600">{{ review.user.username|make_list|first|upper }}</div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h4 class="text-white font-bold text-sm">{{ review.user.username }}</h4>
+                        <div class="flex text-yellow-500 text-[10px] gap-0.5 mt-1">
+                            {% for i in "12345" %}
+                                <i class="{% if forloop.counter <= review.rating %}fa-solid{% else %}fa-regular text-gray-800{% endif %} fa-star"></i>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{{ review.created_at|timesince }}</span>
+            </div>
+            <p class="text-gray-400 text-sm leading-relaxed whitespace-pre-wrap">"{{ review.content }}"</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+</style>
+
+<script>
+    function openAddModal() {
+        const m = document.getElementById('addModal');
+        m.classList.remove('opacity-0', 'pointer-events-none');
+        m.querySelector('.transform').classList.replace('scale-95', 'scale-100');
+    }
+    
+    function closeAddModal() {
+        const m = document.getElementById('addModal');
+        m.classList.add('opacity-0', 'pointer-events-none');
+        m.querySelector('.transform').classList.replace('scale-100', 'scale-95');
+    }
+
+    function openReviewModal() {
+        closeAddModal();
+        const m = document.getElementById('reviewModal');
+        m.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeReviewModal() {
+        const m = document.getElementById('reviewModal');
+        m.classList.add('opacity-0', 'pointer-events-none');
+        openAddModal();
+    }
+
+    function setupStars(containerId, inputId, displayId, activeClass, inactiveClass) {
+        const container = document.getElementById(containerId);
+        if(!container) return;
+        const stars = container.querySelectorAll('i');
+        const input = document.getElementById(inputId);
+        const display = document.getElementById(displayId);
+        let currentVal = 0;
+
+        function updateUI(val) {
+            stars.forEach((s, idx) => {
+                if (idx < val) {
+                    s.classList.replace(inactiveClass, activeClass);
+                    s.classList.add('text-yellow-500');
+                } else {
+                    s.classList.replace(activeClass, inactiveClass);
+                    s.classList.remove('text-yellow-500');
+                }
+            });
+            if(display) display.textContent = val;
+        }
+
+        stars.forEach(star => {
+            star.addEventListener('mouseover', function() { updateUI(this.dataset.value); });
+            star.addEventListener('mouseout', function() { updateUI(currentVal); });
+            star.addEventListener('click', function() {
+                currentVal = this.dataset.value;
+                if(input) input.value = currentVal;
+                
+                if(containerId === 'review-star-container') {
+                    const mainRatingInput = document.getElementById('rating-input');
+                    const mainRatingDisplay = document.getElementById('rating-display');
+                    if(mainRatingInput) mainRatingInput.value = currentVal;
+                    if(mainRatingDisplay) mainRatingDisplay.textContent = currentVal;
+                    
+                    const mainStars = document.getElementById('star-rating-container').querySelectorAll('i');
+                    mainStars.forEach((s, idx) => {
+                        if (idx < currentVal) s.classList.add('text-yellow-500');
+                        else s.classList.remove('text-yellow-500');
+                    });
+                }
+                
+                updateUI(currentVal);
+                updatePreview();
+            });
+        });
+    }
+
+    setupStars('star-rating-container', 'rating-input', 'rating-display', 'fa-solid', 'fa-solid');
+    setupStars('review-star-container', null, null, 'fa-solid', 'fa-solid');
+
+    const revTitle = document.getElementById('reviewTitle');
+    const revText = document.getElementById('reviewText');
+    const prevTitle = document.getElementById('previewTitleDisplay');
+    const prevText = document.getElementById('previewTextDisplay');
+    const charCount = document.getElementById('charCount');
+    const profileUrl = "{% if user.is_authenticated %}{% url 'profile' user.username %}{% else %}/{% endif %}";
+
+    const screenshotInput = document.getElementById('screenshotInput');
+    const previewScreenshot = document.getElementById('previewScreenshot');
+    
+    if (screenshotInput) {
+        screenshotInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    if (previewScreenshot) {
+                        previewScreenshot.src = event.target.result;
+                        previewScreenshot.classList.remove('hidden');
+                    }
+                }
+                reader.readAsDataURL(e.target.files[0]);
+            } else {
+                if (previewScreenshot) {
+                    previewScreenshot.src = '';
+                    previewScreenshot.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    function updatePreview() {
+        if(revTitle && prevTitle) prevTitle.textContent = revTitle.value;
+        if(revText && prevText) {
+            prevText.textContent = revText.value || 'Aún no hay nada que mostrar...';
+            charCount.textContent = revText.value.length;
+        }
+    }
+
+    if(revTitle) revTitle.addEventListener('input', updatePreview);
+    if(revText) revText.addEventListener('input', updatePreview);
+
+    function confirmAdd(id, isReview = false) {
+        const form = document.getElementById('addGameForm');
+        const fd = new FormData(form);
+        
+        if(isReview) {
+            fd.append('review_title', document.getElementById('reviewTitle').value);
+            fd.append('review_text', document.getElementById('reviewText').value);
+        }
+
+        const csrfToken = fd.get('csrfmiddlewaretoken');
+
+        fetch(`/add-backlog/${id}/`, { 
+            method: 'POST', 
+            headers: { 'X-CSRFToken': csrfToken }, 
+            body: fd 
+        })
+        .then(r => {
+            if (!r.ok) throw new Error("Fallo en la red o servidor.");
+            return r.json();
+        })
+        .then(d => { 
+            if(d.status === 'success') { 
+                closeAddModal(); 
+                window.location.href = profileUrl;
+            } else {
+                alert("Hubo un error al guardar. Revisa que tu sesión siga activa.");
+            }
+        })
+        .catch(e => {
+            console.error(e);
+            alert("Error crítico de conexión.");
+        });
+    }
+</script>
+{% endblock %}
