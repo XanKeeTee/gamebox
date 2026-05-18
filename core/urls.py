@@ -25,4 +25,6 @@ urlpatterns = [
     path('toggle-follow/<str:username>/', views.toggle_follow, name='toggle_follow'),
     path('profile/<str:username>/<str:list_type>/', views.follow_list, name='follow_list'),
     path('delete-review/<int:post_id>/', views.delete_review, name='delete_review'),
+
+    path('coleccion/', views.collection_view, name='collection'),
 ]

@@ -1,0 +1,16 @@
+# Entornos virtuales
+venv/
+env/
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+
+# Base de datos local
+db.sqlite3
+
+# Variables de entorno (contraseñas, etc.)
+.env
+
+# Archivos multimedia (los subiremos a Cloudinary luego)
+media/
