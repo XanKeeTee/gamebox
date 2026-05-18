@@ -476,7 +476,7 @@ def delete_review(request, post_id):
     return JsonResponse({'status': 'success'})
 
 @login_required
-def collection(request):
+def collection_view(request):
     # Obtenemos todos los juegos del usuario actual
     user_games = UserGame.objects.filter(user=request.user).order_by('-added_at')
     
