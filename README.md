@@ -24,8 +24,7 @@
 7. [Panel de Administración](#panel-de-administración)
 8. [Stack Tecnológico](#stack-tecnológico)
 9. [Guía de Instalación](#guía-de-instalación)
-10. [Mapa de Navegación](#mapa-de-navegación)
-
+10. 
 ---
 
 ## Características Principales
