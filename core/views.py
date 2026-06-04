@@ -477,17 +477,14 @@ def delete_review(request, post_id):
 
 @login_required
 def collection_view(request):
-    # 1. Sacamos todos los juegos del usuario
     user_games = UserGame.objects.filter(user=request.user)
     
-    # 2. Los filtramos por estado (esto ya lo hace tu código según la captura)
     playing = user_games.filter(status='playing')
     finished = user_games.filter(status='finished')
     completed = user_games.filter(status='completed')
     backlog = user_games.filter(status='backlog')
     abandoned = user_games.filter(status='abandoned')
     
-    # 3. ¡ESTO ES LO QUE FALTA! Creamos los números (stats) para la barra lateral
     stats = {
         'total_games': user_games.count(),
         'playing': playing.count(),
@@ -497,7 +494,6 @@ def collection_view(request):
         'abandoned': abandoned.count(),
     }
     
-    # 4. Metemos todo en el contexto, ¡incluyendo 'stats'!
     context = {
         'user_games': user_games,
         'playing': playing,
@@ -505,7 +501,7 @@ def collection_view(request):
         'completed': completed,
         'backlog': backlog,
         'abandoned': abandoned,
-        'stats': stats,  # <--- Esta línea es la que salva el error
+        'stats': stats,
     }
     
     return render(request, 'core/collection.html', context)
