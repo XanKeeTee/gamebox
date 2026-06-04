@@ -477,28 +477,35 @@ def delete_review(request, post_id):
 
 @login_required
 def collection_view(request):
-    # Obtenemos todos los juegos del usuario actual
-    user_games = UserGame.objects.filter(user=request.user).order_by('-added_at')
+    # 1. Sacamos todos los juegos del usuario
+    user_games = UserGame.objects.filter(user=request.user)
     
-    # Calculamos el tiempo total jugado
-    total_h = sum(g.hours for g in user_games)
-    total_m = sum(g.minutes for g in user_games)
-    total_h += total_m // 60
+    # 2. Los filtramos por estado (esto ya lo hace tu código según la captura)
+    playing = user_games.filter(status='playing')
+    finished = user_games.filter(status='finished')
+    completed = user_games.filter(status='completed')
+    backlog = user_games.filter(status='backlog')
+    abandoned = user_games.filter(status='abandoned')
     
-    # Agrupamos todos los contadores en el diccionario 'stats' que espera el HTML
+    # 3. ¡ESTO ES LO QUE FALTA! Creamos los números (stats) para la barra lateral
     stats = {
         'total_games': user_games.count(),
-        'playing': user_games.filter(status='playing').count(),
-        'finished': user_games.filter(status='finished').count(),
-        'completed': user_games.filter(status='completed').count(),
-        'backlog': user_games.filter(status='backlog').count(),
-        'paused': user_games.filter(status='paused').count(),
-        'abandoned': user_games.filter(status='abandoned').count(),
-        'playtime': f"{total_h}h",
+        'playing': playing.count(),
+        'finished': finished.count(),
+        'completed': completed.count(),
+        'backlog': backlog.count(),
+        'abandoned': abandoned.count(),
     }
-
-    # Enviamos los juegos y los stats al template
-    return render(request, 'core/collection.html', {
+    
+    # 4. Metemos todo en el contexto, ¡incluyendo 'stats'!
+    context = {
         'user_games': user_games,
-        'stats': stats,
-    })
+        'playing': playing,
+        'finished': finished,
+        'completed': completed,
+        'backlog': backlog,
+        'abandoned': abandoned,
+        'stats': stats,  # <--- Esta línea es la que salva el error
+    }
+    
+    return render(request, 'core/collection.html', context)
