@@ -10,12 +10,14 @@ from django.http import JsonResponse
 from .forms import RegistroForm
 from datetime import timedelta
 from .models import ActivityPost, User,UserProfile,UserGame,FavoriteGame,Story,Follow
-from .utils import get_trending_games, search_igdb_games, get_igdb_game_details
+from .utils import get_trending_games, search_igdb_games, get_igdb_game_details, get_upcoming_games
 from django.db.models import Count
 
 def feed(request):
     posts = ActivityPost.objects.all().select_related('user').order_by('-created_at')[:50]
     trending_games = get_trending_games()
+    upcoming_games = get_upcoming_games()
+    
     sugeridos = User.objects.exclude(id=request.user.id)[:3] if request.user.is_authenticated else User.objects.all()[:3]
     
     user_games_titles = []
@@ -52,6 +54,7 @@ def feed(request):
     return render(request, 'core/feed.html', {
         'posts': posts,
         'trending_games': trending_games,
+        'upcoming_games': upcoming_games,
         'sugeridos': sugeridos,
         'user_games': json.dumps(user_games_titles),
         'stories_list': stories_list,

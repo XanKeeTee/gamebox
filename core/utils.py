@@ -2,6 +2,7 @@ import os
 import requests
 import re
 import datetime
+import time
 from django.core.cache import cache
 from dotenv import load_dotenv
 from howlongtobeatpy import HowLongToBeat
@@ -215,3 +216,32 @@ def get_igdb_game_details(game_id):
         return game
     except:
         return None
+
+def get_upcoming_games():
+    # 1. Usamos tu sistema para obtener el token válido
+    token = get_igdb_token()
+    if not token:
+        return []
+
+    current_time = int(time.time())
+    
+    query = (
+        f"fields name, cover.url, first_release_date; "
+        f"where first_release_date > {current_time} & category = 0 & cover != null; "
+        f"sort first_release_date asc; "
+        f"limit 10;"
+    )
+    
+    # 2. Usamos tus variables reales para los headers
+    headers = {
+        'Client-ID': TWITCH_CLIENT_ID,
+        'Authorization': f'Bearer {token}',
+    }
+    
+    try:
+        response = requests.post("https://api.igdb.com/v4/games", headers=headers, data=query, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except:
+        return []

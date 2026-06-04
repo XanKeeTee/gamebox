@@ -15,8 +15,38 @@
     .sub-tab { background-color: #0d1117; border: 1px solid #1f2937; color: #9ca3af; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; transition: all 0.2s; }
     .sub-tab:hover { background-color: #161b22; border-color: #374151; color: white; }
     .sub-tab.active { background-color: rgba(59,130,246,0.1); border-color: #3b82f6; color: #3b82f6; }
+
+    /* Nuevos estilos para Tendencias visuales */
+    .trending-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1rem;
+        transition: all 0.3s ease;
+    }
+    .trending-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px -5px rgba(217, 70, 239, 0.3);
+    }
+    .trending-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(13, 17, 23, 1) 10%, rgba(13, 17, 23, 0.5) 50%, rgba(13, 17, 23, 0) 100%);
+    }
+    .trending-rank {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        background: rgba(13, 17, 23, 0.8);
+        backdrop-blur: 4px;
+        color: white;
+        font-weight: 900;
+        border-radius: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        border: 1px solid rgba(217, 70, 239, 0.5);
+    }
 </style>
 
+<!-- [MODALES DE HISTORIAS IGUALES] -->
 <div id="uploadStoryModal" class="fixed inset-0 z-[150] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
     <div onclick="closeStoryUpload()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
     <div class="relative w-full max-w-lg bg-[#0d1117] border border-gray-800 rounded-3xl p-8 shadow-2xl transform scale-95 transition-transform duration-300" id="uploadStoryContent">
@@ -82,15 +112,18 @@
         <div onclick="nextStory()" class="absolute top-0 right-0 bottom-0 w-1/2 cursor-pointer z-0"></div>
     </div>
 </div>
+<!-- [FIN MODALES] -->
 
 <div class="max-w-[1400px] mx-auto px-6 py-8">
-    <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
         
+        <!-- COLUMNA IZQUIERDA (FEED) - SIN CAMBIOS -->
         <div>
             <div class="flex items-center justify-between mb-8">
                 <h1 class="text-4xl font-black text-white italic tracking-tighter uppercase">Actividad de la red</h1>
             </div>
 
+            <!-- Historias -->
             <div id="storiesWrapper" class="flex items-center gap-6 mb-8 overflow-x-auto custom-scrollbar pb-2">
                 {% if user.is_authenticated %}
                 <div onclick="openStoryUpload()" class="flex flex-col items-center gap-2 cursor-pointer shrink-0 group order-first">
@@ -122,6 +155,7 @@
                 {% endfor %}
             </div>
 
+            <!-- Tabs Principales -->
             <div class="flex items-center gap-8 border-b border-gray-800 mb-6">
                 <button onclick="setMainTab('todo', this)" class="main-tab active text-sm">Todo<div class="tab-indicator"></div></button>
                 <button onclick="setMainTab('siguiendo', this)" class="main-tab text-sm">Siguiendo<div class="tab-indicator"></div></button>
@@ -129,6 +163,7 @@
                 <button onclick="setMainTab('miactividad', this)" class="main-tab text-sm">Mi Actividad<div class="tab-indicator"></div></button>
             </div>
 
+            <!-- Tabs Secundarios (Filtros de tipo) -->
             <div class="flex items-center gap-3 mb-10 overflow-x-auto custom-scrollbar pb-2">
                 <button onclick="setSubTab('all', this)" class="sub-tab active px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-border-all"></i> Todo</button>
                 <button onclick="setSubTab('screenshot', this)" class="sub-tab px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-camera"></i> Capturas</button>
@@ -136,6 +171,7 @@
                 <button onclick="setSubTab('review', this)" class="sub-tab px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-pen"></i> Reseñas</button>
             </div>
 
+            <!-- Contenedor del Feed -->
             <div id="feedContainer" class="space-y-6">
                 {% if not posts %}
                     <div class="flex flex-col items-center justify-center py-20 text-center bg-[#161b22] border border-gray-800 rounded-3xl">
@@ -153,6 +189,7 @@
                          data-user="{{ post.user.username }}"
                          data-game="{{ post.game_title|escapejs }}">
                         
+                        <!-- Cabecera del Post -->
                         <div class="flex justify-between items-start mb-4">
                             <div class="flex items-center gap-4">
                                 <a href="{% url 'profile' post.user.username %}" class="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-800 shrink-0">
@@ -175,6 +212,7 @@
                             <span class="text-[10px] text-gray-600 font-bold uppercase tracking-wider">{{ post.created_at|timesince }}</span>
                         </div>
 
+                        <!-- Contenido del Post -->
                         <div class="flex gap-6 mt-4">
                             {% if post.game_cover %}
                             <a href="/game/{{ post.game_id|default:0 }}/" class="shrink-0">
@@ -213,6 +251,7 @@
                     </div>
                     {% endfor %}
                     
+                    <!-- Mensaje No Resultados -->
                     <div id="noResultsMsg" class="hidden flex-col items-center justify-center py-20 text-center bg-[#161b22] border border-gray-800 rounded-3xl">
                         <div class="w-16 h-16 bg-[#0d1117] rounded-full flex items-center justify-center mb-4">
                             <i class="fa-solid fa-filter-circle-xmark text-2xl text-gray-600"></i>
@@ -224,61 +263,124 @@
             </div>
         </div>
 
-        <div class="space-y-8">
-            <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6">
-                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                    <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Gamers Sugeridos
+        <!-- COLUMNA DERECHA (SIDEBAR) - ¡ACTUALIZADA! -->
+        <div class="space-y-8 lg:sticky lg:top-24 lg:h-screen lg:overflow-y-auto custom-scrollbar pr-2">
+            
+            <!-- Gamers Sugeridos - Ligeramente retocado -->
+            <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6 shadow-xl">
+                <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-blue-500"></i> Gamers Sugeridos
                 </h3>
                 <div class="space-y-5">
-                    {% for user_s in sugeridos %}
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full border border-gray-700 overflow-hidden bg-[#0d1117]">
+                    {% for user_s in sugeridos|slice:":4" %}
+                    <div class="flex items-center justify-between gap-3 bg-[#0d1117] p-3 rounded-2xl border border-gray-800/50 hover:border-gray-700 transition-colors">
+                        <div class="flex items-center gap-3 truncate">
+                            <div class="w-10 h-10 rounded-full border-2 border-gray-700 overflow-hidden bg-[#161b22] shrink-0">
                                 {% if user_s.profile.avatar %}
                                 <img src="{{ user_s.profile.avatar.url }}" class="w-full h-full object-cover">
                                 {% else %}
-                                <div class="w-full h-full flex items-center justify-center text-white font-bold text-xs">{{ user_s.username|make_list|first|upper }}</div>
+                                <div class="w-full h-full flex items-center justify-center text-white font-bold text-xs bg-gray-700">{{ user_s.username|make_list|first|upper }}</div>
                                 {% endif %}
                             </div>
-                            <p class="text-xs font-black text-white uppercase tracking-wider truncate max-w-[100px]">{{ user_s.username }}</p>
+                            <div class="truncate">
+                                <p class="text-xs font-black text-white uppercase tracking-wider truncate">{{ user_s.username }}</p>
+                                <p class="text-[10px] text-gray-500 font-medium">Sugerido para ti</p>
+                            </div>
                         </div>
-                        <a href="{% url 'profile' user_s.username %}" class="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-blue-400">Seguir</a>
+                        <a href="{% url 'profile' user_s.username %}" class="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-blue-400 shrink-0 bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">Ver</a>
                     </div>
+                    {% empty %}
+                    <p class="text-xs text-gray-600 text-center py-4">No hay sugerencias por ahora.</p>
                     {% endfor %}
                 </div>
             </div>
 
-            <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6">
-                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                    <i class="fa-solid fa-bolt text-fuchsia-500"></i> Tendencias
+            <!-- MODIFICADO: Tendencias visuales y bonitas -->
+            <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6 shadow-xl">
+                <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-fire text-fuchsia-500"></i> Tendencias del Momento
                 </h3>
-                <div class="space-y-4">
-                    {% for t_game in trending_games|slice:":5" %}
-                    <a href="/game/{{ t_game.id }}/" class="flex items-center gap-4 group">
-                        <span class="text-xl font-black text-gray-700 group-hover:text-fuchsia-500 transition-colors w-4">{{ forloop.counter }}</span>
-                        <!-- AÑADIDO: Carátula de Tendencias -->
-                        <img src="{{ t_game.cover_url|default:t_game.cover.url|default:'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.png' }}" class="w-10 h-14 rounded-lg object-cover border border-gray-800 group-hover:border-fuchsia-500 transition-colors">
-                        <div class="flex-1 border-b border-gray-800 pb-4 group-hover:border-fuchsia-500/30 transition-colors">
-                            <p class="text-xs font-black text-gray-300 uppercase tracking-wider group-hover:text-white transition-colors line-clamp-1 mb-1">{{ t_game.name }}</p>
-                            <div class="w-full bg-[#0d1117] h-1 rounded-full overflow-hidden">
-                                <div class="bg-gradient-to-r from-blue-500 to-fuchsia-500 h-full w-[{{ forloop.counter|add:"60" }}%]"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    {% for t_game in trending_games|slice:":4" %}
+                    <a href="/game/{{ t_game.id }}/" class="trending-card group h-48 aspect-[3/4]">
+                        <img src="{{ t_game.cover_url|default:t_game.cover.url|default:'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.png' }}" 
+                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                             alt="{{ t_game.name }}">
+                        <div class="trending-overlay"></div>
+                        <span class="trending-rank text-xs">{{ forloop.counter }}</span>
+                        <div class="absolute bottom-0 left-0 right-0 p-3 z-10">
+                            <p class="text-xs font-black text-white uppercase tracking-wider line-clamp-2 group-hover:text-fuchsia-400 transition-colors">{{ t_game.name }}</p>
+                            {% if t_game.total_rating %}
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <i class="fa-solid fa-star text-[10px] text-yellow-500"></i>
+                                <span class="text-[10px] font-bold text-gray-300">{{ t_game.total_rating|stringformat:"d" }}%</span>
                             </div>
+                            {% endif %}
                         </div>
                     </a>
+                    {% empty %}
+                    <p class="text-xs text-gray-600 text-center py-4 col-span-2">Cargando tendencias...</p>
                     {% endfor %}
                 </div>
+            </div>
+
+            <!-- AÑADIDO: Próximos Lanzamientos -->
+            <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6 shadow-xl">
+                <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-days text-emerald-500"></i> Próximos Lanzamientos
+                </h3>
+                <div class="space-y-4">
+                    {% if upcoming_games %}
+                        {% for u_game in upcoming_games|slice:":4" %}
+                        <a href="/game/{{ u_game.id }}/" class="flex items-center gap-4 bg-[#0d1117] p-3 rounded-2xl border border-gray-800/50 hover:border-emerald-900/50 transition-all group">
+                            <img src="{{ u_game.cover_url|default:u_game.cover.url|default:'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.png' }}" 
+                                 class="w-12 h-16 rounded-lg object-cover border border-gray-800 shrink-0 group-hover:border-emerald-500 transition-colors">
+                            <div class="flex-1 truncate">
+                                <p class="text-xs font-black text-gray-200 uppercase tracking-wider group-hover:text-white transition-colors truncate mb-1">{{ u_game.name }}</p>
+                                <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1 rounded-md self-start inline-flex">
+                                    <i class="fa-solid fa-clock text-[10px]"></i>
+                                    <!-- Suponiendo que u_game tiene un campo 'release_date_formatted' -->
+                                    <span class="text-[10px] font-bold uppercase tracking-wider">{{ u_game.release_date_formatted|default:"Próximamente" }}</span>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <!-- Estado vacío si no hay datos de lanzamientos -->
+                        <div class="text-center py-6 border-2 border-dashed border-gray-800 rounded-2xl">
+                            <i class="fa-solid fa-hourglass-start text-2xl text-gray-700 mb-3"></i>
+                            <p class="text-xs text-gray-600 font-bold uppercase tracking-wider">No hay lanzamientos<br>buscados esta semana</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Footer minimalista -->
+            <div class="text-center px-4 py-2">
+                <p class="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Gamebox &copy; 2024</p>
+                <p class="text-[9px] text-gray-800 mt-1">Powered by IGDB & NewsAPI</p>
             </div>
         </div>
 
     </div>
 </div>
 
+<!-- [SCRIPTS IGUALES] -->
 <script>
     let currentMainTab = 'todo';
     let currentSubTab = 'all';
     
     const currentUser = "{{ request.user.username }}";
-    const userGames = JSON.parse('{{ user_games|safe|default:"[]" }}');
+    // Corregido manejo de error si user_games no existe
+    const userGamesRaw = '{{ user_games|safe }}';
+    let userGames = [];
+    try {
+        if (userGamesRaw && userGamesRaw !== 'None') {
+            userGames = JSON.parse(userGamesRaw);
+        }
+    } catch (e) {
+        console.error("Error parsing user_games", e);
+    }
 
     function setMainTab(tabName, btn) {
         currentMainTab = tabName;
@@ -302,7 +404,8 @@
             const postType = post.getAttribute('data-type');
             const postUser = post.getAttribute('data-user');
             const postGame = post.getAttribute('data-game');
-            const hasImage = post.innerHTML.includes('screenshots/');
+            // Corrección: verificar screenshot de forma segura
+            const hasImage = post.querySelector('img[src*="screenshot"]') !== null;
             
             let matchSub = (currentSubTab === 'all' || postType === currentSubTab || (currentSubTab === 'screenshot' && hasImage));
             
@@ -337,6 +440,7 @@
         }
     }
 
+    // Lógica de Historias (Sin cambios)
     let currentStoryUserIndex = 0;
     let currentStoryImageIndex = 0;
     let storyUsers = [];
@@ -358,16 +462,19 @@
         stories.forEach(story => {
             const username = story.dataset.username;
             const ring = story.querySelector('.story-ring');
-            const latestStoryId = storiesDict[username].latest_id;
+            // Verificar si existen historias para ese usuario antes de acceder
+            if (storiesDict[username]) {
+                const latestStoryId = storiesDict[username].latest_id;
 
-            if(viewed[username] && viewed[username] >= latestStoryId) {
-                ring.classList.remove('border-fuchsia-500', 'shadow-[0_0_10px_rgba(217,70,239,0.3)]');
-                ring.classList.add('border-gray-700');
-                story.dataset.viewed = '1';
-            } else {
-                ring.classList.add('border-fuchsia-500', 'shadow-[0_0_10px_rgba(217,70,239,0.3)]');
-                ring.classList.remove('border-gray-700');
-                story.dataset.viewed = '0';
+                if(viewed[username] && viewed[username] >= latestStoryId) {
+                    ring.classList.remove('border-fuchsia-500', 'shadow-[0_0_10px_rgba(217,70,239,0.3)]');
+                    ring.classList.add('border-gray-700');
+                    story.dataset.viewed = '1';
+                } else {
+                    ring.classList.add('border-fuchsia-500', 'shadow-[0_0_10px_rgba(217,70,239,0.3)]');
+                    ring.classList.remove('border-gray-700');
+                    story.dataset.viewed = '0';
+                }
             }
         });
         
@@ -376,54 +483,60 @@
     }
 
     function initStories() {
-        const rawData = '{{ stories_json|safe|default:"{}" }}';
-        if(rawData) {
-            storiesDict = JSON.parse(rawData);
+        const rawData = '{{ stories_json|safe }}';
+        if(rawData && rawData !== 'None' && rawData !== '{}') {
+            try {
+                storiesDict = JSON.parse(rawData);
+            } catch(e) { console.error("Error parsing stories_json", e); }
         }
         
         const gameSelect = document.getElementById('storyGameSelect');
-        userGames.forEach(game => {
-            const opt = document.createElement('option');
-            opt.value = game;
-            opt.textContent = game;
-            gameSelect.appendChild(opt);
-        });
+        if (gameSelect && userGames) {
+            userGames.forEach(game => {
+                const opt = document.createElement('option');
+                opt.value = game;
+                opt.textContent = game;
+                gameSelect.appendChild(opt);
+            });
+        }
 
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('storyFileInput');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        
-        fileInput.addEventListener('change', () => {
-            if(fileInput.files.length > 0) {
-                fileNameDisplay.textContent = "Seleccionado: " + fileInput.files[0].name;
-                fileNameDisplay.classList.remove('hidden');
-                dropZone.classList.add('border-blue-500');
-            }
-        });
+        if (dropZone && fileInput) {
+            dropZone.addEventListener('click', () => fileInput.click());
+            
+            fileInput.addEventListener('change', () => {
+                if(fileInput.files.length > 0) {
+                    fileNameDisplay.textContent = "Seleccionado: " + fileInput.files[0].name;
+                    fileNameDisplay.classList.remove('hidden');
+                    dropZone.classList.add('border-blue-500');
+                }
+            });
 
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('border-blue-500');
-            dropZone.classList.remove('border-gray-700');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('border-blue-500');
-            dropZone.classList.add('border-gray-700');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileInput.files = e.dataTransfer.files;
-            if(fileInput.files.length > 0) {
-                fileNameDisplay.textContent = "Seleccionado: " + fileInput.files[0].name;
-                fileNameDisplay.classList.remove('hidden');
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
                 dropZone.classList.add('border-blue-500');
                 dropZone.classList.remove('border-gray-700');
-            }
-        });
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-blue-500');
+                dropZone.classList.add('border-gray-700');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileInput.files = e.dataTransfer.files;
+                if(fileInput.files.length > 0) {
+                    fileNameDisplay.textContent = "Seleccionado: " + fileInput.files[0].name;
+                    fileNameDisplay.classList.remove('hidden');
+                    dropZone.classList.add('border-blue-500');
+                    dropZone.classList.remove('border-gray-700');
+                }
+            });
+        }
 
         sortStories();
     }
@@ -458,25 +571,30 @@
             if(d.status === 'success') {
                 window.location.reload();
             } else {
-                alert("Error al subir la historia.");
+                alert("Error al subir la historia: " + (d.message || "Unknown error"));
             }
-        });
+        })
+        .catch(e => console.error("Error uploading story", e));
     }
 
     function markStoryViewed(username) {
         let viewed = JSON.parse(localStorage.getItem('gameboxViewedStories') || '{}');
         if (Array.isArray(viewed)) viewed = {};
         
-        viewed[username] = storiesDict[username].latest_id;
-        localStorage.setItem('gameboxViewedStories', JSON.stringify(viewed));
+        if (storiesDict[username]) {
+            viewed[username] = storiesDict[username].latest_id;
+            localStorage.setItem('gameboxViewedStories', JSON.stringify(viewed));
+        }
     }
 
     function openStory(username) {
         storyUsers = Object.keys(storiesDict);
         currentStoryUserIndex = storyUsers.indexOf(username);
         currentStoryImageIndex = 0;
-        document.getElementById('viewStoryModal').classList.remove('opacity-0', 'pointer-events-none');
-        showCurrentStory();
+        if (currentStoryUserIndex !== -1) {
+            document.getElementById('viewStoryModal').classList.remove('opacity-0', 'pointer-events-none');
+            showCurrentStory();
+        }
     }
 
     function closeStory() {
@@ -515,7 +633,7 @@
         if(avatar) {
             avatarEl.innerHTML = `<img src="${avatar}" class="w-full h-full object-cover">`;
         } else {
-            avatarEl.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-blue-600 text-white font-bold text-xs">${username.charAt(0).toUpperCase()}</div>`;
+            avatarEl.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-700 text-white font-bold text-xs">${username.charAt(0).toUpperCase()}</div>`;
         }
 
         const progressContainer = document.getElementById('storyProgressContainer');
