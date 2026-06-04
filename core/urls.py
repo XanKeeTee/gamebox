@@ -10,7 +10,6 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('add-backlog/<int:game_id>/', views.add_game, name='add_game'),
     path('game/<int:game_id>/review/', views.post_review, name='post_review'),
-    path('collection/', views.collection, name='collection'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
     path('delete-game/<int:game_id>/', views.delete_game, name='delete_game'),
 
@@ -26,5 +25,5 @@ urlpatterns = [
     path('profile/<str:username>/<str:list_type>/', views.follow_list, name='follow_list'),
     path('delete-review/<int:post_id>/', views.delete_review, name='delete_review'),
 
-    path('coleccion/', views.collection_view, name='collection'),
+    path('collection/', views.collection_view, name='collection'),
 ]

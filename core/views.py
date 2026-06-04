@@ -357,21 +357,6 @@ def add_game(request, game_id):
     return JsonResponse({'status': 'error'})
 
 @login_required
-def collection(request):
-    user_games = UserGame.objects.filter(user=request.user).order_by('-added_at')
-    
-    context = {
-        'user_games': user_games,
-        'playing': user_games.filter(status='playing'),
-        'finished': user_games.filter(status='finished'),
-        'completed': user_games.filter(status='completed'),
-        'backlog': user_games.filter(status='backlog'),
-        'abandoned': user_games.filter(status='abandoned'),
-    }
-    
-    return render(request, 'core/collection.html', context)
-
-@login_required
 def delete_game(request, game_id):
     if request.method == 'POST':
         # Buscamos el juego del usuario y lo eliminamos
@@ -480,14 +465,23 @@ def delete_review(request, post_id):
 
 @login_required
 def collection_view(request):
-    user_games = UserGame.objects.filter(user=request.user)
+    # Traemos todos los juegos del usuario ordenados por fecha
+    user_games = UserGame.objects.filter(user=request.user).order_by('-added_at')
     
+    # Filtramos por estados
     playing = user_games.filter(status='playing')
     finished = user_games.filter(status='finished')
     completed = user_games.filter(status='completed')
     backlog = user_games.filter(status='backlog')
     abandoned = user_games.filter(status='abandoned')
+    paused = user_games.filter(status='paused')
     
+    # Calculamos el tiempo total jugado sumando horas y minutos
+    total_h = sum(g.hours for g in user_games)
+    total_m = sum(g.minutes for g in user_games)
+    total_h += total_m // 60
+    
+    # Creamos el diccionario stats EXACTAMENTE como lo pide el HTML
     stats = {
         'total_games': user_games.count(),
         'playing': playing.count(),
@@ -495,6 +489,8 @@ def collection_view(request):
         'completed': completed.count(),
         'backlog': backlog.count(),
         'abandoned': abandoned.count(),
+        'paused': paused.count(),
+        'playtime': f"{total_h}h",
     }
     
     context = {
