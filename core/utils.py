@@ -218,21 +218,18 @@ def get_igdb_game_details(game_id):
         return None
 
 def get_upcoming_games():
-    # 1. Usamos tu sistema para obtener el token válido
+    import datetime # Por si acaso no estaba importado
+    
     token = get_igdb_token()
     if not token:
         return []
 
+    # Sacamos el tiempo actual
     current_time = int(time.time())
     
-    query = (
-        f"fields name, cover.url, first_release_date; "
-        f"where first_release_date > {current_time} & category = 0 & cover != null; "
-        f"sort first_release_date asc; "
-        f"limit 10;"
-    )
+    # Hemos quitado el filtro 'category' por si estaba bloqueando juegos importantes
+    query = f"fields name, cover.url, first_release_date; where first_release_date > {current_time} & cover != null; sort first_release_date asc; limit 10;"
     
-    # 2. Usamos tus variables reales para los headers
     headers = {
         'Client-ID': TWITCH_CLIENT_ID,
         'Authorization': f'Bearer {token}',
@@ -240,8 +237,31 @@ def get_upcoming_games():
     
     try:
         response = requests.post("https://api.igdb.com/v4/games", headers=headers, data=query, timeout=10)
+        
         if response.status_code == 200:
-            return response.json()
-        return []
-    except:
+            games = response.json()
+            
+            # Le damos formato a las carátulas y a las fechas antes de enviarlo
+            for game in games:
+                # 1. Mejorar calidad de la imagen
+                cover = game.get('cover')
+                if isinstance(cover, dict) and cover.get('url'):
+                    game['cover']['url'] = str(cover['url']).replace('t_thumb', 't_cover_big')
+                
+                # 2. Convertir la fecha de IGDB (timestamp) a "Día Mes"
+                first_release_date = game.get('first_release_date')
+                if first_release_date:
+                    dt = datetime.datetime.fromtimestamp(first_release_date)
+                    # Formato ej: "15 Oct"
+                    game['release_date_formatted'] = dt.strftime("%d %b")
+                else:
+                    game['release_date_formatted'] = "Próximamente"
+                    
+            return games
+        else:
+            # Si IGDB se queja, lo imprimimos en la terminal para saber por qué
+            print(f"Error IGDB Lanzamientos: {response.status_code} - {response.text}")
+            return []
+    except Exception as e:
+        print(f"Error cargando lanzamientos: {e}")
         return []
