@@ -418,7 +418,7 @@
                                 <div class="flex items-center gap-5 text-gray-500">
                                     <button onclick="shareGame('{{ game.game_name|escapejs }}')" title="Copiar nombre" class="hover:text-white transition-colors"><i class="fa-solid fa-share-nodes"></i></button>
                                     {% if request.user == profile_user %}
-                                    <button onclick="openEditGame({{ game.game_id }}, '{{ game.game_name|escapejs }}', '{{ game.cover_url }}', '{{ game.status }}', {{ game.rating }}, {{ game.hours }}, {{ game.minutes }}, '{{ game.platform|escapejs }}')" title="Editar" class="hover:text-[var(--user-accent)] transition-colors"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="openEditGame({{ game.game_id }}, '{{ game.game_name|escapejs }}', '{{ game.cover_url }}', '{{ game.status }}', {{ game.rating|default:'0' }}, {{ game.hours|default:'0' }}, {{ game.minutes|default:'0' }}, '{{ game.platform|escapejs }}')" title="Editar" class="hover:text-[var(--user-accent)] transition-colors"><i class="fa-solid fa-pen"></i></button>
                                     <button onclick="toggleHideRow(this)" title="Ocultar" class="hover:text-yellow-500 transition-colors"><i class="fa-solid fa-eye-slash"></i></button>
                                     <button onclick="deleteUserGame({{ game.game_id }}, '{{ game.game_name|escapejs }}')" title="Eliminar" class="hover:text-red-500 transition-colors"><i class="fa-solid fa-trash"></i></button>
                                     {% endif %}
@@ -520,7 +520,6 @@
         const stars = container.querySelectorAll('i');
         const input = document.getElementById('edit-rating-input');
         const display = document.getElementById('edit-rating-display');
-        let currentVal = parseInt(input.value) || 0;
 
         function updateUI(val) {
             stars.forEach((s, idx) => {
@@ -535,14 +534,13 @@
 
         stars.forEach(star => {
             star.addEventListener('mouseover', function() { updateUI(this.dataset.value); });
-            star.addEventListener('mouseout', function() { updateUI(currentVal); });
+            star.addEventListener('mouseout', function() { updateUI(input.value); });
             star.addEventListener('click', function() {
-                currentVal = this.dataset.value;
-                input.value = currentVal;
-                updateUI(currentVal);
+                input.value = this.dataset.value;
+                updateUI(this.dataset.value);
             });
         });
-        updateUI(currentVal);
+        updateUI(input.value);
     }
     setupEditStars();
 
@@ -665,10 +663,11 @@
             headers: { 'X-CSRFToken': csrfToken },
             body: fd
         })
-        .then(r => r.json())
-        .then(d => {
-            if(d.status === 'success') window.location.reload();
-            else alert("Error al guardar.");
+        .then(() => {
+            window.location.reload();
+        })
+        .catch(() => {
+            window.location.reload();
         });
     }
 

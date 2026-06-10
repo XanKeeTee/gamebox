@@ -14,7 +14,34 @@ from .utils import get_trending_games, search_igdb_games, get_igdb_game_details,
 from django.db.models import Count
 
 def feed(request):
-    posts = ActivityPost.objects.all().select_related('user').order_by('-created_at')[:50]
+    # 1. Traemos los posts
+    raw_posts = ActivityPost.objects.all().select_related('user').order_by('-created_at')[:50]
+    posts = list(raw_posts)
+    
+    # 2. Buscamos qué juegos tienen foto real en la colección
+    user_ids = [p.user_id for p in posts]
+    game_titles = [p.game_title for p in posts]
+    
+    user_games_con_foto = UserGame.objects.filter(
+        user_id__in=user_ids,
+        game_name__in=game_titles
+    ).exclude(screenshot='')
+    
+    fotos_dict = {f"{ug.user_id}-{ug.game_name}": ug.screenshot for ug in user_games_con_foto}
+    
+    # 3. El Filtro Inteligente: Inyectar foto SOLO al post más nuevo que no sea reseña
+    juegos_procesados = set()
+    
+    for post in posts:
+        # Ignoramos las reseñas por completo para que no se ensucien
+        if getattr(post, 'type', '') != 'review':
+            clave = f"{post.user_id}-{post.game_title}"
+            # Si el juego tiene foto y no la hemos puesto todavía...
+            if clave in fotos_dict and clave not in juegos_procesados:
+                post.screenshot = fotos_dict[clave]
+                juegos_procesados.add(clave) # Lo marcamos para que no se duplique en posts antiguos
+
+    # --- El resto de tu función intacta hacia abajo ---
     trending_games = get_trending_games()
     upcoming_games = get_upcoming_games()
     
@@ -26,7 +53,9 @@ def feed(request):
 
     time_limit = timezone.now() - timedelta(hours=24)
     active_stories = Story.objects.filter(created_at__gte=time_limit).select_related('user').order_by('created_at')
-    sugeridos = User.objects.exclude(id=request.user.id).order_by('?')[:5]
+    
+    if request.user.is_authenticated:
+        sugeridos = User.objects.exclude(id=request.user.id).order_by('?')[:5]
     
     stories_data = {}
     for story in active_stories:

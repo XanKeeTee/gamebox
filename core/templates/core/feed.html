@@ -16,7 +16,6 @@
     .sub-tab:hover { background-color: #161b22; border-color: #374151; color: white; }
     .sub-tab.active { background-color: rgba(59,130,246,0.1); border-color: #3b82f6; color: #3b82f6; }
 
-    /* Nuevos estilos para Tendencias visuales */
     .trending-card {
         position: relative;
         overflow: hidden;
@@ -46,7 +45,6 @@
     }
 </style>
 
-<!-- [MODALES DE HISTORIAS IGUALES] -->
 <div id="uploadStoryModal" class="fixed inset-0 z-[150] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
     <div onclick="closeStoryUpload()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
     <div class="relative w-full max-w-lg bg-[#0d1117] border border-gray-800 rounded-3xl p-8 shadow-2xl transform scale-95 transition-transform duration-300" id="uploadStoryContent">
@@ -112,18 +110,15 @@
         <div onclick="nextStory()" class="absolute top-0 right-0 bottom-0 w-1/2 cursor-pointer z-0"></div>
     </div>
 </div>
-<!-- [FIN MODALES] -->
 
 <div class="max-w-[1400px] mx-auto px-6 py-8">
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
         
-        <!-- COLUMNA IZQUIERDA (FEED) - SIN CAMBIOS -->
         <div>
             <div class="flex items-center justify-between mb-8">
                 <h1 class="text-4xl font-black text-white italic tracking-tighter uppercase">Actividad de la red</h1>
             </div>
 
-            <!-- Historias -->
             <div id="storiesWrapper" class="flex items-center gap-6 mb-8 overflow-x-auto custom-scrollbar pb-2">
                 {% if user.is_authenticated %}
                 <div onclick="openStoryUpload()" class="flex flex-col items-center gap-2 cursor-pointer shrink-0 group order-first">
@@ -155,7 +150,6 @@
                 {% endfor %}
             </div>
 
-            <!-- Tabs Principales -->
             <div class="flex items-center gap-8 border-b border-gray-800 mb-6">
                 <button onclick="setMainTab('todo', this)" class="main-tab active text-sm">Todo<div class="tab-indicator"></div></button>
                 <button onclick="setMainTab('siguiendo', this)" class="main-tab text-sm">Siguiendo<div class="tab-indicator"></div></button>
@@ -163,7 +157,6 @@
                 <button onclick="setMainTab('miactividad', this)" class="main-tab text-sm">Mi Actividad<div class="tab-indicator"></div></button>
             </div>
 
-            <!-- Tabs Secundarios (Filtros de tipo) -->
             <div class="flex items-center gap-3 mb-10 overflow-x-auto custom-scrollbar pb-2">
                 <button onclick="setSubTab('all', this)" class="sub-tab active px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-border-all"></i> Todo</button>
                 <button onclick="setSubTab('screenshot', this)" class="sub-tab px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-camera"></i> Capturas</button>
@@ -171,7 +164,6 @@
                 <button onclick="setSubTab('review', this)" class="sub-tab px-5 py-2.5 rounded-full flex items-center gap-2"><i class="fa-solid fa-pen"></i> Reseñas</button>
             </div>
 
-            <!-- Contenedor del Feed -->
             <div id="feedContainer" class="space-y-6">
                 {% if not posts %}
                     <div class="flex flex-col items-center justify-center py-20 text-center bg-[#161b22] border border-gray-800 rounded-3xl">
@@ -189,7 +181,6 @@
                          data-user="{{ post.user.username }}"
                          data-game="{{ post.game_title|escapejs }}">
                         
-                        <!-- Cabecera del Post -->
                         <div class="flex justify-between items-start mb-4">
                             <div class="flex items-center gap-4">
                                 <a href="{% url 'profile' post.user.username %}" class="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-800 shrink-0">
@@ -212,7 +203,6 @@
                             <span class="text-[10px] text-gray-600 font-bold uppercase tracking-wider">{{ post.created_at|timesince }}</span>
                         </div>
 
-                        <!-- Contenido del Post -->
                         <div class="flex gap-6 mt-4">
                             {% if post.game_cover %}
                             <a href="/game/{{ post.game_id|default:0 }}/" class="shrink-0">
@@ -243,7 +233,7 @@
 
                                 {% if post.screenshot %}
                                 <div class="mt-4 rounded-xl overflow-hidden border border-gray-800 shadow-lg">
-                                    <img src="{{ post.screenshot.url }}" class="w-full max-h-[400px] object-cover hover:scale-[1.02] transition-transform duration-500">
+                                    <img src="{{ post.screenshot.url }}" data-feed-screenshot="true" class="w-full max-h-[400px] object-cover hover:scale-[1.02] transition-transform duration-500">
                                 </div>
                                 {% endif %}
                             </div>
@@ -251,7 +241,6 @@
                     </div>
                     {% endfor %}
                     
-                    <!-- Mensaje No Resultados -->
                     <div id="noResultsMsg" class="hidden flex-col items-center justify-center py-20 text-center bg-[#161b22] border border-gray-800 rounded-3xl">
                         <div class="w-16 h-16 bg-[#0d1117] rounded-full flex items-center justify-center mb-4">
                             <i class="fa-solid fa-filter-circle-xmark text-2xl text-gray-600"></i>
@@ -263,10 +252,8 @@
             </div>
         </div>
 
-        <!-- COLUMNA DERECHA (SIDEBAR) - ¡ACTUALIZADA! -->
         <div class="space-y-8 lg:sticky lg:top-24 lg:h-screen lg:overflow-y-auto custom-scrollbar pr-2">
             
-            <!-- Gamers Sugeridos - Ligeramente retocado -->
             <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6 shadow-xl">
                 <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                     <i class="fa-solid fa-user-plus text-blue-500"></i> Gamers Sugeridos
@@ -295,7 +282,6 @@
                 </div>
             </div>
 
-            <!-- MODIFICADO: Tendencias visuales y bonitas -->
             <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6 shadow-xl">
                 <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                     <i class="fa-solid fa-fire text-fuchsia-500"></i> Tendencias del Momento
@@ -324,7 +310,6 @@
                 </div>
             </div>
 
-            <!-- AÑADIDO: Próximos Lanzamientos -->
             <div class="bg-[#161b22] border border-gray-800 rounded-3xl p-6 shadow-xl">
                 <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                     <i class="fa-solid fa-calendar-days text-emerald-500"></i> Próximos Lanzamientos
@@ -339,14 +324,12 @@
                                 <p class="text-xs font-black text-gray-200 uppercase tracking-wider group-hover:text-white transition-colors truncate mb-1">{{ u_game.name }}</p>
                                 <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1 rounded-md self-start inline-flex">
                                     <i class="fa-solid fa-clock text-[10px]"></i>
-                                    <!-- Suponiendo que u_game tiene un campo 'release_date_formatted' -->
                                     <span class="text-[10px] font-bold uppercase tracking-wider">{{ u_game.release_date_formatted|default:"Próximamente" }}</span>
                                 </div>
                             </div>
                         </a>
                         {% endfor %}
                     {% else %}
-                        <!-- Estado vacío si no hay datos de lanzamientos -->
                         <div class="text-center py-6 border-2 border-dashed border-gray-800 rounded-2xl">
                             <i class="fa-solid fa-hourglass-start text-2xl text-gray-700 mb-3"></i>
                             <p class="text-xs text-gray-600 font-bold uppercase tracking-wider">No hay lanzamientos<br>buscados esta semana</p>
@@ -355,7 +338,6 @@
                 </div>
             </div>
 
-            <!-- Footer minimalista -->
             <div class="text-center px-4 py-2">
                 <p class="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Gamebox &copy; 2024</p>
                 <p class="text-[9px] text-gray-800 mt-1">Powered by IGDB & NewsAPI</p>
@@ -365,13 +347,11 @@
     </div>
 </div>
 
-<!-- [SCRIPTS IGUALES] -->
 <script>
     let currentMainTab = 'todo';
     let currentSubTab = 'all';
     
     const currentUser = "{{ request.user.username }}";
-    // Corregido manejo de error si user_games no existe
     const userGamesRaw = '{{ user_games|safe }}';
     let userGames = [];
     try {
@@ -404,8 +384,9 @@
             const postType = post.getAttribute('data-type');
             const postUser = post.getAttribute('data-user');
             const postGame = post.getAttribute('data-game');
-            // Corrección: verificar screenshot de forma segura
-            const hasImage = post.querySelector('img[src*="screenshot"]') !== null;
+            
+            // LA LÍNEA CORREGIDA: Buscamos el atributo exacto
+            const hasImage = post.querySelector('[data-feed-screenshot="true"]') !== null;
             
             let matchSub = (currentSubTab === 'all' || postType === currentSubTab || (currentSubTab === 'screenshot' && hasImage));
             
@@ -440,7 +421,6 @@
         }
     }
 
-    // Lógica de Historias (Sin cambios)
     let currentStoryUserIndex = 0;
     let currentStoryImageIndex = 0;
     let storyUsers = [];
@@ -462,7 +442,6 @@
         stories.forEach(story => {
             const username = story.dataset.username;
             const ring = story.querySelector('.story-ring');
-            // Verificar si existen historias para ese usuario antes de acceder
             if (storiesDict[username]) {
                 const latestStoryId = storiesDict[username].latest_id;
 

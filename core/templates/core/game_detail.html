@@ -566,21 +566,11 @@
             headers: { 'X-CSRFToken': csrfToken }, 
             body: fd 
         })
-        .then(r => {
-            if (!r.ok) throw new Error("Fallo en la red o servidor.");
-            return r.json();
+        .then(() => {
+            window.location.href = profileUrl;
         })
-        .then(d => { 
-            if(d.status === 'success') { 
-                closeAddModal(); 
-                window.location.href = profileUrl;
-            } else {
-                alert("Hubo un error al guardar. Revisa que tu sesión siga activa.");
-            }
-        })
-        .catch(e => {
-            console.error(e);
-            alert("Error crítico de conexión.");
+        .catch(() => {
+            window.location.href = profileUrl;
         });
     }
 </script>

@@ -262,7 +262,7 @@
                             
                             <div class="flex items-center gap-5 text-gray-500">
                                 <button onclick="shareGame('{{ game.game_name|escapejs }}')" title="Copiar nombre" class="hover:text-white transition-colors"><i class="fa-solid fa-share-nodes"></i></button>
-                                <button onclick="openEditGame({{ game.game_id }}, '{{ game.game_name|escapejs }}', '{{ game.cover_url }}', '{{ game.status }}', {{ game.rating }}, {{ game.hours }}, {{ game.minutes }}, '{{ game.platform|escapejs }}')" title="Editar" class="hover:text-[var(--user-accent)] transition-colors"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="openEditGame({{ game.game_id }}, '{{ game.game_name|escapejs }}', '{{ game.cover_url }}', '{{ game.status }}', {{ game.rating|default:'0' }}, {{ game.hours|default:'0' }}, {{ game.minutes|default:'0' }}, '{{ game.platform|escapejs }}')" title="Editar" class="hover:text-[var(--user-accent)] transition-colors"><i class="fa-solid fa-pen"></i></button>
                                 <button onclick="deleteUserGame({{ game.game_id }}, '{{ game.game_name|escapejs }}')" title="Eliminar" class="hover:text-red-500 transition-colors"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
@@ -321,6 +321,7 @@
 </div>
 
 <script>
+    let updateEditStarsUI;
     // LÓGICA DE EDICIÓN DE JUEGOS
     function setupEditStars() {
         const container = document.getElementById('edit-star-rating-container');
@@ -328,9 +329,8 @@
         const stars = container.querySelectorAll('i');
         const input = document.getElementById('edit-rating-input');
         const display = document.getElementById('edit-rating-display');
-        let currentVal = parseInt(input.value) || 0;
 
-        function updateUI(val) {
+        updateEditStarsUI = function(val) {
             stars.forEach((s, idx) => {
                 if (idx < val) s.classList.add('text-yellow-500');
                 else s.classList.remove('text-yellow-500');
@@ -339,15 +339,14 @@
         }
 
         stars.forEach(star => {
-            star.addEventListener('mouseover', function() { updateUI(this.dataset.value); });
-            star.addEventListener('mouseout', function() { updateUI(currentVal); });
+            star.addEventListener('mouseover', function() { updateEditStarsUI(this.dataset.value); });
+            star.addEventListener('mouseout', function() { updateEditStarsUI(input.value); });
             star.addEventListener('click', function() {
-                currentVal = this.dataset.value;
-                input.value = currentVal;
-                updateUI(currentVal);
+                input.value = this.dataset.value;
+                updateEditStarsUI(this.dataset.value);
             });
         });
-        updateUI(currentVal);
+        updateEditStarsUI(input.value);
     }
     setupEditStars();
 
@@ -359,20 +358,21 @@
         document.getElementById('editGameCoverImg').src = cover;
         
         document.querySelectorAll('.edit-status-radio').forEach(r => {
-            r.checked = (r.value === status);
+            r.checked = (r.value.toLowerCase().trim() === status.toLowerCase().trim());
         });
 
         document.getElementById('edit-rating-input').value = rating;
         const display = document.getElementById('edit-rating-display');
         if(display) display.textContent = rating;
-        const stars = document.getElementById('edit-star-rating-container').querySelectorAll('i');
-        stars.forEach((s, idx) => {
-            if (idx < rating) s.classList.add('text-yellow-500');
-            else s.classList.remove('text-yellow-500');
-        });
+        
+        if (typeof updateEditStarsUI === 'function') {
+            updateEditStarsUI(rating);
+        }
 
+        const platLower = platform ? platform.toLowerCase().trim() : '';
         document.querySelectorAll('.edit-plat-radio').forEach(r => {
-            if(platform && (platform.toLowerCase() === r.value.toLowerCase() || platform.includes(r.value))) {
+            const radioValLower = r.value.toLowerCase().trim();
+            if (platLower && (platLower === radioValLower || platLower.includes(radioValLower) || radioValLower.includes(platLower))) {
                 r.checked = true;
             } else {
                 r.checked = false;
@@ -400,10 +400,11 @@
             headers: { 'X-CSRFToken': csrfToken },
             body: fd
         })
-        .then(r => r.json())
-        .then(d => {
-            if(d.status === 'success') window.location.reload();
-            else alert("Error al guardar.");
+        .then(() => {
+            window.location.reload();
+        })
+        .catch(() => {
+            window.location.reload();
         });
     }
 
