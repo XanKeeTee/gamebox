@@ -10,11 +10,6 @@
     .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
-    .activity-box { width: 10px; height: 10px; border-radius: 2px; background-color: #1f2937; }
-    .activity-box.level-1 { background-color: #0e4429; }
-    .activity-box.level-2 { background-color: #006d32; }
-    .activity-box.level-3 { background-color: #26a641; }
-    .activity-box.level-4 { background-color: #39d353; }
     
     .tab-active { border-bottom-width: 2px; border-color: var(--user-accent); color: white !important; }
     .tab-active i { color: var(--user-accent); }
@@ -512,26 +507,6 @@
                     <span class="flex items-center gap-1"><i class="fa-solid fa-gamepad text-gray-500 text-xs"></i> {{ stats.total_games|default:"0" }}</span>
                     <span class="flex items-center gap-1"><i class="fa-regular fa-flag text-purple-500 text-xs"></i> {{ stats.finished|default:"0" }}</span>
                     <span class="flex items-center gap-1"><i class="fa-solid fa-check text-green-500 text-xs"></i> {{ stats.completed|default:"0" }}</span>
-                </div>
-            </div>
-
-            <div class="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
-                <div class="flex justify-between items-end mb-4">
-                    <h3 class="font-bold text-white text-sm">Mapa de Actividad</h3>
-                    <span class="text-[10px] text-gray-500">Últimos 90 días</span>
-                </div>
-                <div class="grid grid-cols-[auto_1fr] gap-2">
-                    <div class="flex flex-col gap-[6px] text-[8px] text-gray-500 pt-1">
-                        <span>L</span><span>X</span><span>V</span>
-                    </div>
-                    <div class="grid grid-cols-12 gap-1.5">
-                        <script>
-                            for(let i=0; i<84; i++) {
-                                let level = Math.floor(Math.random() * 2);
-                                document.write(`<div class="activity-box ${level > 0 ? 'level-'+level : ''}"></div>`);
-                            }
-                        </script>
-                    </div>
                 </div>
             </div>
         </div>
