@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.http import JsonResponse
-from .forms import RegistroForm
+from .forms import RegistroForm,PerfilForm
 from datetime import timedelta
 from .models import ActivityPost, User,UserProfile,UserGame,FavoriteGame,Story,Follow
 from .utils import get_trending_games, search_igdb_games, get_igdb_game_details, get_upcoming_games
@@ -504,3 +504,12 @@ def collection_view(request):
     }
     
     return render(request, 'core/collection.html', context)
+
+def editar_perfil(request):
+    if request.method == 'POST':
+        perfil_usuario, created = UserProfile.objects.get_or_create(user=request.user)
+        form = PerfilForm(request.POST, request.FILES, instance=perfil_usuario)
+        
+        if form.is_valid():
+            form.save()
+            return redirect('profile', request.user.username)

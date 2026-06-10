@@ -13,6 +13,7 @@ urlpatterns = [
     path('add-backlog/<int:game_id>/', views.add_game, name='add_game'),
     path('game/<int:game_id>/review/', views.post_review, name='post_review'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
+    path('editar-perfil/', views.editar_perfil, name='editar_perfil'),
     path('delete-game/<int:game_id>/', views.delete_game, name='delete_game'),
 
     path('search-fav/', views.search_fav_api, name='search_fav_api'),
